@@ -1,0 +1,234 @@
+<aside class="sidebar">
+
+    <!-- LOGO -->
+
+    <div class="brand">
+
+        <div class="brand-icon">
+            C
+        </div>
+
+        <div class="brand-text">
+
+            <h2>ClubVault</h2>
+
+            <span>
+                Club Management
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <!-- NAVIGATION -->
+
+    <nav class="navigation">
+
+        <p class="nav-label">
+            MAIN MENU
+        </p>
+
+
+        <a
+            href="/dashboard"
+            class="nav-item
+            {% if active_page == 'dashboard' %}
+                active
+            {% endif %}"
+        >
+
+            <span class="nav-icon">
+                ⌂
+            </span>
+
+            <span>
+                Dashboard
+            </span>
+
+        </a>
+
+
+        <a
+            href="/transactions"
+            class="nav-item
+            {% if active_page == 'transactions' %}
+                active
+            {% endif %}"
+        >
+
+            <span class="nav-icon">
+                ◫
+            </span>
+
+            <span>
+                Transactions
+            </span>
+
+        </a>
+
+
+        <a
+            href="/reimbursements"
+            class="nav-item
+            {% if active_page == 'reimbursements' %}
+                active
+            {% endif %}"
+        >
+
+            <span class="nav-icon">
+                ↗
+            </span>
+
+            <span>
+                Reimbursements
+            </span>
+
+            {% if pending_reimbursements %}
+
+                <span class="nav-count">
+                    {{ pending_reimbursements }}
+                </span>
+
+            {% endif %}
+
+        </a>
+
+
+        <a
+            href="/budgets"
+            class="nav-item
+            {% if active_page == 'budgets' %}
+                active
+            {% endif %}"
+        >
+
+            <span class="nav-icon">
+                ◈
+            </span>
+
+            <span>
+                Budgets
+            </span>
+
+        </a>
+
+
+        <a
+            href="/members"
+            class="nav-item
+            {% if active_page == 'members' %}
+                active
+            {% endif %}"
+        >
+
+            <span class="nav-icon">
+                ♙
+            </span>
+
+            <span>
+                Members
+            </span>
+
+        </a>
+
+
+        <p class="nav-label nav-section">
+            MANAGEMENT
+        </p>
+
+
+        <a
+            href="/reports"
+            class="nav-item
+            {% if active_page == 'reports' %}
+                active
+            {% endif %}"
+        >
+
+            <span class="nav-icon">
+                ▤
+            </span>
+
+            <span>
+                Reports
+            </span>
+
+        </a>
+
+
+        <a
+            href="/settings"
+            class="nav-item
+            {% if active_page == 'settings' %}
+                active
+            {% endif %}"
+        >
+
+            <span class="nav-icon">
+                ⚙
+            </span>
+
+            <span>
+                Settings
+            </span>
+
+        </a>
+
+    </nav>
+
+
+    <!-- BOTTOM -->
+
+    <div class="sidebar-bottom">
+
+
+        <div class="help-card">
+
+            <div class="help-icon">
+                ?
+            </div>
+
+            <div class="help-content">
+
+                <strong>
+                    Need help?
+                </strong>
+
+                <span>
+                    Contact your club admin
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- USER -->
+
+        <div class="sidebar-user">
+
+            <div class="sidebar-avatar">
+
+                {{ user.initials | default("ME") }}
+
+            </div>
+
+
+            <div class="sidebar-user-info">
+
+                <strong>
+                    {{ user.name | default("Muhaimin") }}
+                </strong>
+
+                <span>
+                    {{ user.role | default("Club Treasurer") }}
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</aside>
