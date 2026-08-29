@@ -14,13 +14,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadExpenseTable(budgetId);
 
+    // When a receipt is attached the manual fields are ignored by the scan
+    // endpoint, so disable them rather than demanding input we throw away.
+    // (A disabled input is also exempt from browser 'required' validation.)
+    const receiptInput = document.getElementById('expenseReceipt');
+    const manualFields = ['expenseDescription', 'expenseAmount', 'expenseCategory']
+        .map(id => document.getElementById(id));
+    const submitBtnEl = document.getElementById('expenseSubmitBtn');
+
+    function syncManualFields() {
+        const hasReceipt = receiptInput.files && receiptInput.files.length > 0;
+        manualFields.forEach(el => {
+            if (!el) return;
+            el.disabled = hasReceipt;
+            el.style.opacity = hasReceipt ? '0.5' : '';
+        });
+        if (submitBtnEl) {
+            submitBtnEl.textContent = hasReceipt
+                ? 'Scan Receipt & Save'
+                : 'Save Expense Transaction';
+        }
+        const hint = document.getElementById('receiptHint');
+        if (hint) {
+            hint.textContent = hasReceipt
+                ? 'Receipt attached — merchant, amount and category will be read from the image.'
+                : 'Attach a receipt image and the fields above will be filled automatically.';
+        }
+    }
+
+    receiptInput.addEventListener('change', syncManualFields);
+    syncManualFields();
+
     const form = document.getElementById('expenseForm');
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const submitBtn = document.getElementById('expenseSubmitBtn');
-        const originalText = submitBtn.textContent;
-        const receiptInput = document.getElementById('expenseReceipt');
         const hasReceipt = receiptInput.files && receiptInput.files.length > 0;
 
         submitBtn.disabled = true;
@@ -33,13 +62,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 await saveManualExpense(budgetId);
             }
             form.reset();
+            syncManualFields();
             await loadExpenseTable(budgetId);
         } catch (error) {
             console.error('Failed to save expense:', error);
             alert('Failed to save expense. Check console for details.');
         } finally {
             submitBtn.disabled = false;
-            submitBtn.textContent = originalText;
+            syncManualFields();
         }
     });
 });

@@ -1,4 +1,5 @@
 import io
+import logging
 import os
 from pathlib import Path
 from typing import Optional
@@ -22,6 +23,12 @@ BASE_DIR = Path(__file__).resolve().parent
 env_path = BASE_DIR / ".env"
 load_dotenv(dotenv_path=env_path, override=True)
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s  %(levelname)-8s %(name)s  %(message)s",
+)
+logger = logging.getLogger("clubvault")
+
 app = FastAPI(title="ClubVault API", version="1.0.0")
 
 # Mount static assets if folder exists
@@ -32,9 +39,15 @@ if static_dir.exists():
 templates_dir = BASE_DIR / "templates"
 templates = Jinja2Templates(directory=templates_dir) if templates_dir.exists() else None
 
+# The frontend is served by this same app, so it needs no cross-origin access.
+# Wide-open CORS with credentials would let any website call this API.
+ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[o.strip() for o in ALLOWED_ORIGINS if o.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -166,7 +179,7 @@ def render_page_safely(request: Request, template_name: str, fallback_title: str
         try:
             return templates.TemplateResponse(request=request, name=template_name)
         except Exception:
-            pass
+            logger.exception("Template %s failed to render", template_name)
     
     # Fallback response if template isn't finished by teammate
     return HTMLResponse(content=f"""
@@ -224,7 +237,8 @@ def create_budget(budget: BudgetCreate):
         response = supabase.table("budgets").insert(budget.model_dump()).execute()
         return response.data[0]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Request failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/budgets/{budget_id}")
@@ -250,7 +264,8 @@ def get_budget_summary(budget_id: str):
             "alert_triggered": is_alert,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Request failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.patch("/budgets/{budget_id}")
@@ -280,7 +295,8 @@ def update_budget(budget_id: str, update: BudgetUpdate):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Request failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/budgets/{budget_id}/analytics", response_model=CategoryBreakdownResponse)
@@ -311,7 +327,8 @@ def get_category_analytics(budget_id: str):
             "categories": breakdown
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Request failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # ------------------------------------------------------------------------------
@@ -382,7 +399,8 @@ def get_category_limits(budget_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Request failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.put("/budgets/{budget_id}/category-limits")
@@ -410,7 +428,8 @@ def upsert_category_limit(budget_id: str, item: CategoryLimitUpsert):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Request failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.delete("/budgets/{budget_id}/category-limits/{category}")
@@ -426,7 +445,8 @@ def delete_category_limit(budget_id: str, category: str):
         )
         return {"deleted": len(res.data or [])}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Request failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # ------------------------------------------------------------------------------
@@ -438,7 +458,8 @@ def create_expense(expense: ExpenseCreate):
         response = supabase.table("expenses").insert(expense.model_dump()).execute()
         return response.data[0]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Request failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/budgets/{budget_id}/expenses")
@@ -447,7 +468,8 @@ def list_expenses(budget_id: str):
         response = supabase.table("expenses").select("*").eq("budget_id", budget_id).execute()
         return response.data
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Request failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/expenses/scan", response_model=ReceiptScanResult)
@@ -492,9 +514,10 @@ async def scan_receipt(file: UploadFile = File(...)):
         return parsed_data
 
     except Exception as e:
+        logger.exception("Receipt processing failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to process receipt: {str(e)}",
+            detail="Failed to process receipt. Check the server log for details.",
         )
 
 
@@ -540,7 +563,8 @@ def create_quotation(quote: QuotationCreate):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Request failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/budgets/{budget_id}/quotations")
@@ -588,7 +612,8 @@ def list_quotations(budget_id: str):
             "quotations": quotes,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Request failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.patch("/quotations/{quotation_id}/status")
@@ -638,7 +663,8 @@ def update_quotation_status(quotation_id: str, update: QuotationStatusUpdate):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Request failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.delete("/quotations/{quotation_id}")
@@ -648,7 +674,8 @@ def delete_quotation(quotation_id: str):
         res = supabase.table("quotations").delete().eq("id", quotation_id).execute()
         return {"deleted": len(res.data or [])}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Request failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/reimbursements", status_code=status.HTTP_201_CREATED)
@@ -662,7 +689,8 @@ def create_reimbursement(claim: ReimbursementCreate):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Request failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # NOTE: this must stay ABOVE any /reimbursements/{something} route,
@@ -695,14 +723,25 @@ def reimbursement_stats(budget_id: str):
             float(budget_res.data[0]["total_budget"]) if budget_res.data else 0.0
         )
 
+        # Money already spent counts against the budget too, otherwise this
+        # card contradicts the Remaining Funds figure on the budget page.
+        expenses_res = (
+            supabase.table("expenses")
+            .select("amount")
+            .eq("budget_id", budget_id)
+            .execute()
+        )
+        total_spent = sum(float(e["amount"]) for e in (expenses_res.data or []))
+
         return {
             "total_requests": total_requests,
             "pending_review": pending_review,
             "approved_amount": round(approved_amount, 2),
-            "available_budget": round(total_budget - approved_amount, 2),
+            "available_budget": round(total_budget - total_spent - approved_amount, 2),
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Request failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/reimbursements")
@@ -715,7 +754,8 @@ def list_reimbursements(budget_id: Optional[str] = None):
         res = query.order("created_at", desc=True).execute()
         return res.data or []
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Request failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.patch("/reimbursements/{claim_id}/status")
@@ -740,4 +780,5 @@ def update_reimbursement_status(claim_id: str, update: ReimbursementStatusUpdate
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Request failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
