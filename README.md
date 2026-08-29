@@ -83,7 +83,7 @@ After activation, you should see `(.venv)` at the beginning of your terminal:
 With the virtual environment activated:
 
 ```bash
-pip install fastapi uvicorn
+python --version
 ```
 
 If the project already contains a `requirements.txt`, use:
