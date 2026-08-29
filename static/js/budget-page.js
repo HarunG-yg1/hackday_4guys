@@ -39,6 +39,26 @@ document.addEventListener('DOMContentLoaded', () => {
     populateCategoryPicker();
     refreshAll(budgetId);
 
+    const editForm = document.getElementById('editBudgetForm');
+    editForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('editBudgetBtn');
+        const original = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
+
+        try {
+            await updateBudget(budgetId);
+            await refreshAll(budgetId);
+        } catch (error) {
+            console.error('Failed to update budget:', error);
+            alert('Could not save the budget. Check console for details.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = original;
+        }
+    });
+
     const addForm = document.getElementById('addCategoryForm');
     addForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -82,6 +102,9 @@ async function loadSummary(budgetId) {
         const pct = total > 0 ? Math.min((spent / total) * 100, 100) : 0;
 
         setText('budgetEventName', data.budget.event_name || 'Budget');
+        prefill('editEventName', data.budget.event_name || '');
+        prefill('editTotalBudget', total.toFixed(2));
+        prefill('editThreshold', Math.round((data.budget.alert_threshold ?? 0.8) * 100));
         setText('budgetTotal', `RM ${total.toFixed(2)}`);
         setText('budgetSpent', `RM ${spent.toFixed(2)}`);
         setText('budgetRemaining', `RM ${remaining.toFixed(2)}`);
@@ -249,6 +272,28 @@ function wireAllocationButtons(budgetId) {
     });
 }
 
+async function updateBudget(budgetId) {
+    const thresholdPct = parseFloat(document.getElementById('editThreshold').value);
+    if (Number.isNaN(thresholdPct) || thresholdPct <= 0 || thresholdPct > 100) {
+        throw new Error('Alert threshold must be between 1 and 100');
+    }
+
+    const payload = {
+        event_name: document.getElementById('editEventName').value,
+        total_budget: parseFloat(document.getElementById('editTotalBudget').value),
+        // The API stores the threshold as a fraction, the form shows a percentage.
+        alert_threshold: thresholdPct / 100
+    };
+
+    const response = await fetch(`/budgets/${budgetId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Update failed: ${response.status}`);
+    return response.json();
+}
+
 async function saveLimit(budgetId, category, limitAmount) {
     const response = await fetch(`/budgets/${budgetId}/category-limits`, {
         method: 'PUT',
@@ -265,6 +310,12 @@ function populateCategoryPicker() {
     if (!select) return;
     select.innerHTML = '<option value="">Select a category</option>' +
         CATEGORIES.map(c => `<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join('');
+}
+
+function prefill(id, value) {
+    const el = document.getElementById(id);
+    // Don't clobber what the user is currently typing.
+    if (el && document.activeElement !== el) el.value = value;
 }
 
 function setText(id, value) {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ClubVault - Expenses</title>
+    <title>ClubVault - Quotations</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -90,7 +90,7 @@
                     <span class="nav-icon">⌂</span>
                     <span>Dashboard</span>
                 </a>
-                <a href="/expenses-page" class="nav-item active">
+                <a href="/expenses-page" class="nav-item">
                     <span class="nav-icon">◫</span>
                     <span>Expenses</span>
                 </a>
@@ -102,7 +102,7 @@
                     <span class="nav-icon">◈</span>
                     <span>Budgets</span>
                 </a>
-                <a href="/quotations-page" class="nav-item">
+                <a href="/quotations-page" class="nav-item active">
                     <span class="nav-icon">▤</span>
                     <span>Quotations</span>
                 </a>
@@ -121,7 +121,7 @@
             <header class="topbar">
                 <div class="breadcrumb" style="font-size: 0.875rem; color: var(--text-muted);">
                     <span>ClubVault</span> <span style="margin: 0 8px;">/</span>
-                    <strong style="color: var(--text-main);">Expenses</strong>
+                    <strong style="color: var(--text-main);">Quotations</strong>
                 </div>
 
                 <div class="topbar-actions">
@@ -144,73 +144,90 @@
             
             <div class="content-pad">
                 <div class="page-header">
-                    <h1 style="font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 24px;">
-                        Log & Track Expenses
+                    <h1 style="font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">
+                        Quotations
                     </h1>
+                    <p style="font-size: 0.875rem; color: var(--text-muted);">
+                        Log vendor quotes before you commit. Approving one turns it into an expense.
+                    </p>
                 </div>
 
-                <!-- NO BUDGET WARNING (shown only if no budget is active) -->
+                <!-- NO BUDGET WARNING -->
                 <div id="noBudgetCard" class="card" style="display: none; margin-bottom: 24px;">
                     <div class="section-header">
                         <h3 class="section-title">No Active Budget</h3>
                     </div>
                     <p style="font-size: 0.875rem; color: var(--text-muted);">
-                        You need an active budget before logging expenses.
+                        You need an active budget before logging quotations.
                         <a href="/dashboard" style="color: var(--primary); font-weight: 600;">Go to Dashboard to create one</a>.
                     </p>
                 </div>
 
-                <div id="expensesContent" style="display: none;">
+                <div id="quotationsContent" style="display: none;">
 
-                <!-- ADD EXPENSE FORM -->
+                <!-- SUMMARY -->
+                <div class="summary-grid" style="grid-template-columns: repeat(3, 1fr);">
+                    <div class="card summary-card">
+                        <div class="card-header"><span class="title">Pending Quotes</span></div>
+                        <div class="amount" id="quotePendingTotal">—</div>
+                        <span class="sub-text">Not yet committed</span>
+                    </div>
+                    <div class="card summary-card">
+                        <div class="card-header"><span class="title">Approved Quotes</span></div>
+                        <div class="amount" id="quoteApprovedTotal">—</div>
+                        <span class="sub-text">Already logged as expenses</span>
+                    </div>
+                    <div class="card summary-card">
+                        <div class="card-header"><span class="title">Projected Remaining</span></div>
+                        <div class="amount" id="quoteProjected" style="color: var(--success-text);">—</div>
+                        <div><span class="badge green" id="quoteProjectedBadge">—</span></div>
+                    </div>
+                </div>
+
+                <!-- ADD QUOTATION -->
                 <div class="card" style="margin-bottom: 24px;">
                     <div class="section-header">
-                        <h3 class="section-title">Record New Expense</h3>
+                        <div>
+                            <h3 class="section-title">Log a Quotation</h3>
+                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+                                Record a vendor's quoted price. Nothing is charged to the budget until you approve it.
+                            </p>
+                        </div>
                     </div>
-                    
-                    <form id="expenseForm">
+
+                    <form id="quotationForm">
                         <div class="form-grid">
                             <div class="form-group full">
-                                <label for="expenseDescription">Description</label>
-                                <input type="text" id="expenseDescription" placeholder="What did you pay for?" required>
+                                <label for="quoteVendor">Vendor name</label>
+                                <input type="text" id="quoteVendor" placeholder="Who is quoting?" required>
                             </div>
-                            
+
                             <div class="form-group">
-                                <label for="expenseAmount">Amount (RM)</label>
-                                <input type="number" id="expenseAmount" step="0.01" placeholder="0.00" required>
+                                <label for="quoteAmount">Estimated amount (RM)</label>
+                                <input type="number" id="quoteAmount" step="0.01" min="0" placeholder="0.00" required>
                             </div>
-                            
+
                             <div class="form-group">
-                                <label for="expenseCategory">Category</label>
-                                <select id="expenseCategory" required>
-                                    <option value="Food & Groceries">Food & Groceries</option>
-                                    <option value="Books & Education">Books & Education</option>
-                                    <option value="Rent & Accommodation">Rent & Accommodation</option>
-                                    <option value="Entertainment">Entertainment</option>
-                                    <option value="Transport">Transport</option>
-                                    <option value="Savings & Investments">Savings & Investments</option>
+                                <label for="quoteCategory">Category</label>
+                                <select id="quoteCategory" required>
+                                    <option value="">Select a category</option>
                                 </select>
                             </div>
 
                             <div class="form-group full">
-                                <label for="expenseReceipt">Upload Receipt (optional — auto-fills the fields above via AI scan)</label>
-                                <input type="file" id="expenseReceipt" accept=".png,.jpg,.jpeg,.webp" style="padding: 9px 16px;">
-                                <span class="form-hint">If you attach a receipt image, its detected merchant/amount/category will be used instead of the fields above.</span>
+                                <label for="quoteDescription">Description</label>
+                                <input type="text" id="quoteDescription" placeholder="What is being quoted for?">
                             </div>
                         </div>
-                        
-                        <button type="submit" id="expenseSubmitBtn" class="btn-submit">Save Expense Transaction</button>
+
+                        <button type="submit" id="quoteSubmitBtn" class="btn-submit">Save Quotation</button>
                     </form>
                 </div>
 
-                <!-- DETAILED EXPENSE TABLE -->
+                <!-- QUOTATION TABLE -->
                 <div class="card" style="padding: 0; overflow: hidden;">
                     <div class="section-header" style="padding: 24px 24px 0;">
-                        <h3 class="section-title">Transaction History</h3>
-                        <button class="filter-btn">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
-                            Filter
-                        </button>
+                        <h3 class="section-title">Logged Quotations</h3>
                     </div>
 
                     <div class="table-responsive">
@@ -218,25 +235,26 @@
                             <thead>
                                 <tr>
                                     <th>Date</th>
-                                    <th>Description</th>
+                                    <th>Vendor</th>
                                     <th>Category</th>
+                                    <th>Status</th>
                                     <th>Amount</th>
                                 </tr>
                             </thead>
-                            <tbody id="expenseTableBody">
-                                <tr><td colspan="4" style="text-align:center; padding: 24px; color: var(--text-muted);">Loading...</td></tr>
+                            <tbody id="quotationTableBody">
+                                <tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--text-muted);">Loading...</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
 
                 </div>
-                <!-- /expensesContent -->
+                <!-- /quotationsContent -->
 
             </div>
         </main>
     </div>
 <script src="/static/js/budget-context.js"></script>
-<script src="/static/js/expenses.js"></script>
+<script src="/static/js/quotations.js"></script>
 </body>
 </html>

@@ -69,6 +69,10 @@
                     <span class="nav-icon">◈</span>
                     <span>Budgets</span>
                 </a>
+                <a href="/quotations-page" class="nav-item">
+                    <span class="nav-icon">▤</span>
+                    <span>Quotations</span>
+                </a>
                 <p class="nav-label">MANAGEMENT</p>
                 <a href="/settings-page" class="nav-item">
                     <span class="nav-icon">⚙</span>
@@ -158,6 +162,33 @@
                             <span class="badge green" id="budgetStatusBadge">On Track</span>
                         </div>
                     </div>
+                </div>
+
+                <!-- EDIT THE BUDGET ITSELF -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="section-header">
+                        <div>
+                            <h3 class="section-title">Edit Budget</h3>
+                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+                                Change the name, the total, or the alert threshold at any time.
+                            </p>
+                        </div>
+                    </div>
+
+                    <form id="editBudgetForm">
+                        <div class="budget-input-group">
+                            <input type="text" id="editEventName" class="budget-input"
+                                   placeholder="Budget name" required>
+                            <input type="number" id="editTotalBudget" class="budget-input"
+                                   step="0.01" min="0" placeholder="Total budget (RM)" required>
+                            <input type="number" id="editThreshold" class="budget-input"
+                                   step="1" min="1" max="100" placeholder="Alert at %" required>
+                            <button type="submit" id="editBudgetBtn" class="btn-save">Save Changes</button>
+                        </div>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px;">
+                            Alert threshold is a percentage — 80 means warn once 80% of the budget is spent.
+                        </p>
+                    </form>
                 </div>
 
                 <!-- CATEGORY ALLOCATIONS -->

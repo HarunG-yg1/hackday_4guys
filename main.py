@@ -104,6 +104,16 @@ EXPENSE_CATEGORIES = [
 ]
 
 
+class BudgetUpdate(BaseModel):
+    event_name: Optional[str] = None
+    total_budget: Optional[float] = None
+    alert_threshold: Optional[float] = None
+
+
+class QuotationStatusUpdate(BaseModel):
+    status: str
+
+
 class CategoryLimitUpsert(BaseModel):
     category: str
     limit_amount: float
@@ -129,8 +139,10 @@ class CategoryLimitsResponse(BaseModel):
 class QuotationCreate(BaseModel):
     budget_id: str
     vendor_name: str
+    category: str
     estimated_amount: float
     description: Optional[str] = None
+    status: str = "Pending"
 
 
 class ReimbursementCreate(BaseModel):
@@ -188,6 +200,11 @@ async def render_expenses(request: Request):
 async def render_reimbursements(request: Request):
     return render_page_safely(request, "reimbursements.html", "Reimbursements")
 
+@app.get("/quotations-page")
+async def render_quotations(request: Request):
+    return render_page_safely(request, "quotations.html", "Quotations")
+
+
 @app.get("/budget-page")
 async def render_budget(request: Request):
     return render_page_safely(request, "budget.html", "Budgets")
@@ -232,6 +249,36 @@ def get_budget_summary(budget_id: str):
             "remaining_budget": remaining,
             "alert_triggered": is_alert,
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.patch("/budgets/{budget_id}")
+def update_budget(budget_id: str, update: BudgetUpdate):
+    """Edit an existing budget. Only the fields you send are changed."""
+    payload = {k: v for k, v in update.model_dump().items() if v is not None}
+    if not payload:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    if "total_budget" in payload and payload["total_budget"] < 0:
+        raise HTTPException(status_code=400, detail="total_budget cannot be negative")
+    if "alert_threshold" in payload and not (0 < payload["alert_threshold"] <= 1):
+        raise HTTPException(
+            status_code=400,
+            detail="alert_threshold must be between 0 and 1 (e.g. 0.8 for 80%)",
+        )
+
+    try:
+        res = (
+            supabase.table("budgets")
+            .update(payload)
+            .eq("id", budget_id)
+            .execute()
+        )
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Budget not found")
+        return res.data[0]
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -482,18 +529,124 @@ async def scan_and_save_receipt(
 # ------------------------------------------------------------------------------
 @app.post("/quotations", status_code=status.HTTP_201_CREATED)
 def create_quotation(quote: QuotationCreate):
+    """Log a vendor quotation — a planned cost, not yet spent."""
+    if quote.estimated_amount < 0:
+        raise HTTPException(status_code=400, detail="estimated_amount cannot be negative")
     try:
         res = supabase.table("quotations").insert(quote.model_dump()).execute()
+        if not res.data:
+            raise HTTPException(status_code=500, detail="Insert returned no row")
         return res.data[0]
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/budgets/{budget_id}/quotations")
 def list_quotations(budget_id: str):
+    """All quotations for a budget, plus how the pending ones affect headroom."""
     try:
-        res = supabase.table("quotations").select("*").eq("budget_id", budget_id).execute()
-        return res.data
+        res = (
+            supabase.table("quotations")
+            .select("*")
+            .eq("budget_id", budget_id)
+            .order("created_at", desc=True)
+            .execute()
+        )
+        quotes = res.data or []
+
+        pending_total = sum(
+            float(q["estimated_amount"]) for q in quotes
+            if (q.get("status") or "") == "Pending"
+        )
+        approved_total = sum(
+            float(q["estimated_amount"]) for q in quotes
+            if (q.get("status") or "") == "Approved"
+        )
+
+        budget_res = (
+            supabase.table("budgets").select("total_budget").eq("id", budget_id).execute()
+        )
+        total_budget = (
+            float(budget_res.data[0]["total_budget"]) if budget_res.data else 0.0
+        )
+
+        expenses_res = (
+            supabase.table("expenses").select("amount").eq("budget_id", budget_id).execute()
+        )
+        total_spent = sum(float(e["amount"]) for e in (expenses_res.data or []))
+
+        return {
+            "budget_id": budget_id,
+            "total_budget": round(total_budget, 2),
+            "total_spent": round(total_spent, 2),
+            "pending_total": round(pending_total, 2),
+            "approved_total": round(approved_total, 2),
+            # What is left if every pending quotation gets approved.
+            "projected_remaining": round(total_budget - total_spent - pending_total, 2),
+            "quotations": quotes,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.patch("/quotations/{quotation_id}/status")
+def update_quotation_status(quotation_id: str, update: QuotationStatusUpdate):
+    """Approve or reject a quotation.
+
+    Approving converts it into a real expense, so the budget updates itself
+    without the treasurer retyping anything. Rejecting just marks it.
+    """
+    allowed = {"Pending", "Approved", "Rejected"}
+    if update.status not in allowed:
+        raise HTTPException(
+            status_code=400, detail=f"status must be one of {sorted(allowed)}"
+        )
+
+    try:
+        current = (
+            supabase.table("quotations").select("*").eq("id", quotation_id).execute()
+        )
+        if not current.data:
+            raise HTTPException(status_code=404, detail="Quotation not found")
+        quote = current.data[0]
+
+        was_approved = (quote.get("status") or "") == "Approved"
+
+        res = (
+            supabase.table("quotations")
+            .update({"status": update.status})
+            .eq("id", quotation_id)
+            .execute()
+        )
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Quotation not found")
+
+        # Only create the expense on the transition into Approved, so
+        # re-approving an already-approved quotation cannot double-charge.
+        if update.status == "Approved" and not was_approved:
+            supabase.table("expenses").insert({
+                "budget_id": quote["budget_id"],
+                "title": quote["vendor_name"],
+                "amount": float(quote["estimated_amount"]),
+                "category": quote.get("category") or "Uncategorized",
+                "receipt_url": None,
+            }).execute()
+
+        return res.data[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/quotations/{quotation_id}")
+def delete_quotation(quotation_id: str):
+    """Remove a quotation. Any expense already created from it stays."""
+    try:
+        res = supabase.table("quotations").delete().eq("id", quotation_id).execute()
+        return {"deleted": len(res.data or [])}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
