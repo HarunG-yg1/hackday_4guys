@@ -4,8 +4,10 @@ from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi import FastAPI, File, HTTPException, UploadFile, status, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from google import genai
 from google.genai import types
 from PIL import Image
@@ -13,7 +15,9 @@ from pydantic import BaseModel
 from supabase import Client, create_client
 
 # Force load .env from absolute path relative to main.py
-env_path = Path(__file__).resolve().parent / ".env"
+# Assuming main.py is inside 'app/' and .env is in the root directory 'hackday_4guys/'
+BASE_DIR = Path(__file__).resolve().parent
+env_path = BASE_DIR.parent / ".env"
 load_dotenv(dotenv_path=env_path, override=True)
 
 app = FastAPI(title="ClubVault API", version="1.0.0")
@@ -27,7 +31,16 @@ app.add_middleware(
 )
 
 # ------------------------------------------------------------------------------
-# 1. Environment & Client Setup
+# 1. Static Files & Templates Setup
+# ------------------------------------------------------------------------------
+# Mount the static directory so CSS/JS can be served
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+
+# Setup Jinja2 templates pointing to the templates directory
+templates = Jinja2Templates(directory=BASE_DIR / "templates")
+
+# ------------------------------------------------------------------------------
+# 2. Environment & Client Setup
 # ------------------------------------------------------------------------------
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
@@ -42,7 +55,7 @@ gemini_client = genai.Client(api_key=gemini_api_key) if gemini_api_key else None
 
 
 # ------------------------------------------------------------------------------
-# 2. Pydantic Schemas
+# 3. Pydantic Schemas
 # ------------------------------------------------------------------------------
 class BudgetCreate(BaseModel):
     event_name: str
@@ -66,20 +79,20 @@ class ReceiptScanResult(BaseModel):
     confidence_score: float
 
 
-class CategoryBreakdownItem(BaseModel):
-    category: str
-    total_spent: float
-    percentage: float
-
-
-class CategoryBreakdownResponse(BaseModel):
-    budget_id: str
-    total_spent: float
-    categories: list[CategoryBreakdownItem]
-
+# ------------------------------------------------------------------------------
+# 4. Frontend UI Routes
+# ------------------------------------------------------------------------------
+@app.get("/dashboard")
+def get_dashboard(request: Request):
+    """
+    Renders the HTML UI. 
+    In your templates/dashboard.html, you can now use:
+    <link rel="stylesheet" href="{{ url_for('static', path='css/dashboard.css') }}">
+    """
+    return templates.TemplateResponse("dashboard.html", {"request": request})
 
 # ------------------------------------------------------------------------------
-# 3. Budget & Expense Endpoints
+# 5. Budget & Expense API Endpoints
 # ------------------------------------------------------------------------------
 @app.post("/budgets", status_code=status.HTTP_201_CREATED)
 def create_budget(budget: BudgetCreate):
@@ -134,70 +147,8 @@ def list_expenses(budget_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/expenses/scan-and-save", response_model=ExpenseCreate, status_code=201)
-async def scan_and_save_receipt(
-    budget_id: str = Form(...),
-    file: UploadFile = File(...)
-):
-    """Scan receipt using Gemini OCR and immediately save it into Supabase."""
-    # 1. Verify budget exists
-    budget_res = supabase.table("budgets").select("id").eq("id", budget_id).execute()
-    if not budget_res.data:
-        raise HTTPException(status_code=404, detail="Budget not found")
-
-    # 2. Extract OCR data with Gemini
-    ocr_result = await scan_receipt(file)
-
-    # 3. Insert directly into Supabase
-    expense_payload = {
-        "budget_id": budget_id,
-        "title": ocr_result.merchant,
-        "amount": ocr_result.amount,
-        "category": ocr_result.category,
-        "receipt_url": None
-    }
-    
-    res = supabase.table("expenses").insert(expense_payload).execute()
-    if not res.data:
-        raise HTTPException(status_code=500, detail="Failed to save scanned expense")
-        
-    return res.data[0]
-
-
-@app.get("/budgets/{budget_id}/analytics", response_model=CategoryBreakdownResponse)
-def get_category_analytics(budget_id: str):
-    """Calculate spending per category and percentage breakdown for charts."""
-    # 1. Fetch expenses for budget
-    res = supabase.table("expenses").select("amount, category").eq("budget_id", budget_id).execute()
-    expenses = res.data or []
-
-    total_spent = sum(e["amount"] for e in expenses)
-    
-    # 2. Group totals by category
-    category_totals = {}
-    for e in expenses:
-        cat = e.get("category") or "Uncategorized"
-        category_totals[cat] = category_totals.get(cat, 0.0) + float(e["amount"])
-
-    # 3. Build breakdown output
-    breakdown = []
-    for cat, amount in category_totals.items():
-        pct = round((amount / total_spent * 100), 2) if total_spent > 0 else 0.0
-        breakdown.append({
-            "category": cat,
-            "total_spent": round(amount, 2),
-            "percentage": pct
-        })
-
-    return {
-        "budget_id": budget_id,
-        "total_spent": round(total_spent, 2),
-        "categories": breakdown
-    }
-
-
 # ------------------------------------------------------------------------------
-# 4. Gemini OCR Receipt Scanner Endpoint
+# 6. Gemini OCR Receipt Scanner Endpoint
 # ------------------------------------------------------------------------------
 @app.post("/expenses/scan", response_model=ReceiptScanResult)
 async def scan_receipt(file: UploadFile = File(...)):
@@ -225,8 +176,7 @@ async def scan_receipt(file: UploadFile = File(...)):
         )
 
         response = gemini_client.models.generate_content(
-            model="gemini-3.6-flash",
-
+            model="gemini-2.5-flash",
             contents=[image, prompt],
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
