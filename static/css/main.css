@@ -1454,3 +1454,111 @@ td:last-child {
         font-size: 0.9rem;
     }
 }
+/* =========================================================
+   EDIT LINK (section header action)
+========================================================= */
+.edit-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--primary);
+    text-decoration: none;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-base);
+}
+
+.edit-link:hover {
+    background: var(--primary-light);
+    color: var(--primary-dark);
+    gap: var(--spacing-md);
+}
+
+.edit-link svg {
+    transition: transform var(--transition-base);
+}
+
+.edit-link:hover svg {
+    transform: translateX(2px);
+}
+
+/* =========================================================
+   REIMBURSEMENT CLAIM ACTIONS (approve / reject)
+========================================================= */
+.claim-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+}
+
+.claim-actions button {
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 0.7rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.claim-actions button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-approve {
+    background: var(--success-bg);
+    color: var(--success-text);
+}
+
+.btn-approve:hover:not(:disabled) {
+    border-color: var(--success-text);
+}
+
+.btn-reject {
+    background: var(--danger-bg);
+    color: var(--danger-text);
+}
+
+.btn-reject:hover:not(:disabled) {
+    border-color: var(--danger-text);
+}
+
+/* =========================================================
+   BUDGET PAGE — ALLOCATION ROWS
+========================================================= */
+.allocation-row {
+    padding-bottom: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.allocation-row:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.btn-remove {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    width: 38px;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.btn-remove:hover:not(:disabled) {
+    border-color: var(--danger-text);
+    color: var(--danger-text);
+}
+
+.btn-remove:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

@@ -156,7 +156,7 @@
 
             <nav class="navigation">
                 <p class="nav-label">MAIN MENU</p>
-                <a href="/dashboard" class="nav-item active">
+                <a href="/dashboard" class="nav-item">
                     <span class="nav-icon">⌂</span>
                     <span>Dashboard</span>
                 </a>
@@ -164,7 +164,7 @@
                     <span class="nav-icon">◫</span>
                     <span>Expenses</span>
                 </a>
-                <a href="/reimbursements-page" class="nav-item">
+                <a href="/reimbursements-page" class="nav-item active">
                     <span class="nav-icon">↗</span>
                     <span>Reimbursements</span>
                 </a>
@@ -222,23 +222,36 @@
                     </button>
                 </div>
 
+                <!-- NO BUDGET WARNING -->
+                <div id="noBudgetCard" class="card" style="display: none; margin-bottom: 24px;">
+                    <div class="section-header">
+                        <h3 class="section-title">No Active Budget</h3>
+                    </div>
+                    <p style="font-size: 0.875rem; color: var(--text-muted);">
+                        You need an active budget before submitting reimbursements.
+                        <a href="/dashboard" style="color: var(--primary); font-weight: 600;">Go to Dashboard to create one</a>.
+                    </p>
+                </div>
+
+                <div id="reimbursementsContent" style="display: none;">
+
                 <!-- STATISTICS GRID -->
                 <div class="summary-grid" style="grid-template-columns: repeat(4, 1fr);">
                     <div class="card stat-card">
                         <span>Total Requests</span>
-                        <h3>24</h3>
+                        <h3 id="statTotalRequests">—</h3>
                     </div>
                     <div class="card stat-card">
                         <span>Pending Review</span>
-                        <h3>2</h3>
+                        <h3 id="statPendingReview">—</h3>
                     </div>
                     <div class="card stat-card">
                         <span>Approved</span>
-                        <h3>RM 2,840</h3>
+                        <h3 id="statApproved">—</h3>
                     </div>
                     <div class="card stat-card">
                         <span>Available Budget</span>
-                        <h3>RM 7,160</h3>
+                        <h3 id="statAvailable">—</h3>
                     </div>
                 </div>
 
@@ -251,43 +264,39 @@
                         </div>
                     </div>
                     
-                    <form>
+                    <form id="reimbursementForm">
                         <div class="form-grid">
                             <div class="form-group full">
-                                <label>Full name</label>
-                                <input type="text" placeholder="Enter your full name">
+                                <label for="claimantName">Full name</label>
+                                <input type="text" id="claimantName" placeholder="Enter your full name" required>
                             </div>
                             
                             <div class="form-group">
-                                <label>Expense category</label>
-                                <select>
+                                <label for="claimCategory">Expense category</label>
+                                <select id="claimCategory" required>
                                     <option value="">Select a category</option>
-                                    <option value="food">Food & Beverage</option>
-                                    <option value="software">Software & Tech</option>
-                                    <option value="marketing">Marketing</option>
-                                    <option value="transport">Transportation</option>
+                                    <option value="Food &amp; Beverage">Food &amp; Beverage</option>
+                                    <option value="Software &amp; Tech">Software &amp; Tech</option>
+                                    <option value="Marketing">Marketing</option>
+                                    <option value="Transportation">Transportation</option>
+                                    <option value="Equipment">Equipment</option>
                                 </select>
                             </div>
                             
                             <div class="form-group">
-                                <label>Amount (RM)</label>
-                                <input type="number" step="0.01" placeholder="0.00">
+                                <label for="claimAmount">Amount (RM)</label>
+                                <input type="number" id="claimAmount" step="0.01" min="0" placeholder="0.00" required>
                             </div>
                             
                             <div class="form-group full">
-                                <label>Description</label>
-                                <textarea rows="3" placeholder="What was this expense for?"></textarea>
-                            </div>
-
-                            <div class="form-group full">
-                                <label>Upload Receipt</label>
-                                <input type="file" accept=".pdf,.png,.jpg,.jpeg" style="padding: 9px 16px;">
+                                <label for="claimDescription">Description</label>
+                                <textarea id="claimDescription" rows="3" placeholder="What was this expense for?"></textarea>
                             </div>
                         </div>
                         
                         <div class="form-footer">
                             <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0;">Your request will be sent to the treasurer for review.</p>
-                            <button type="button" class="btn-primary">Submit reimbursement →</button>
+                            <button type="submit" id="reimbursementSubmitBtn" class="btn-primary">Submit reimbursement →</button>
                         </div>
                     </form>
                 </div>
@@ -298,7 +307,7 @@
                         <h3 class="section-title">Recent Requests</h3>
                         <div class="topbar-search" style="padding: 6px 12px; background: var(--surface); border: 1px solid var(--border);">
                             <span>⌕</span>
-                            <input type="search" placeholder="Search requests..." style="border: none; outline: none; background: transparent; font-size: 0.8rem;">
+                            <input type="search" id="reimbursementSearch" placeholder="Search requests..." style="border: none; outline: none; background: transparent; font-size: 0.8rem;">
                         </div>
                     </div>
 
@@ -313,66 +322,20 @@
                                     <th>Amount</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td>
-                                        <div style="display: flex; flex-direction: column;">
-                                            <strong style="color: var(--text-main);">Coffee Cart Supplies (Casadio Undici A1 filter)</strong>
-                                            <span style="font-size: 0.75rem; color: var(--text-muted);">Equipment</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div style="display: flex; align-items: center; gap: 8px;">
-                                            <div class="table-avatar">TA</div>
-                                            Tufayl Aiman
-                                        </div>
-                                    </td>
-                                    <td class="td-date">Aug 28, 2026</td>
-                                    <td><span class="badge red" style="background: var(--warning-bg); color: var(--warning-text);">Pending</span></td>
-                                    <td>RM 120.00</td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <div style="display: flex; flex-direction: column;">
-                                            <strong style="color: var(--text-main);">RGMS Project Cloud Hosting</strong>
-                                            <span style="font-size: 0.75rem; color: var(--text-muted);">Software & Tech</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div style="display: flex; align-items: center; gap: 8px;">
-                                            <div class="table-avatar">JD</div>
-                                            Jay
-                                        </div>
-                                    </td>
-                                    <td class="td-date">Aug 21, 2026</td>
-                                    <td><span class="badge green">Approved</span></td>
-                                    <td>RM 45.50</td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <div style="display: flex; flex-direction: column;">
-                                            <strong style="color: var(--text-main);">Finance Club Bake Sale (Spar Mixer Rental)</strong>
-                                            <span style="font-size: 0.75rem; color: var(--text-muted);">Food & Beverage</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div style="display: flex; align-items: center; gap: 8px;">
-                                            <div class="table-avatar">TA</div>
-                                            Tufayl Aiman
-                                        </div>
-                                    </td>
-                                    <td class="td-date">Aug 15, 2026</td>
-                                    <td><span class="badge green">Approved</span></td>
-                                    <td>RM 250.00</td>
-                                </tr>
+                            <tbody id="reimbursementTableBody">
+                                <tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--text-muted);">Loading...</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
 
+                </div>
+                <!-- /reimbursementsContent -->
+
             </div>
         </main>
     </div>
 <script src="/static/js/budget-context.js"></script>
+<script src="/static/js/reimbursement.js"></script>
 </body>
 </html>

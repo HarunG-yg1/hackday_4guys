@@ -53,7 +53,7 @@
 
             <nav class="navigation">
                 <p class="nav-label">MAIN MENU</p>
-                <a href="/dashboard" class="nav-item active">
+                <a href="/dashboard" class="nav-item">
                     <span class="nav-icon">⌂</span>
                     <span>Dashboard</span>
                 </a>
@@ -65,7 +65,7 @@
                     <span class="nav-icon">↗</span>
                     <span>Reimbursements</span>
                 </a>
-                <a href="/budget-page" class="nav-item">
+                <a href="/budget-page" class="nav-item active">
                     <span class="nav-icon">◈</span>
                     <span>Budgets</span>
                 </a>
@@ -107,103 +107,106 @@
             
             <div class="content-pad">
                 <div class="page-header">
-                    <h1 style="font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 24px;">
-                        Budget & Savings Management
+                    <h1 style="font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">
+                        Budget Management
                     </h1>
+                    <p style="font-size: 0.875rem; color: var(--text-muted);">
+                        Set spending limits per category and watch them against real expenses.
+                    </p>
                 </div>
 
+                <!-- NO BUDGET WARNING -->
+                <div id="noBudgetCard" class="card" style="display: none; margin-bottom: 24px;">
+                    <div class="section-header">
+                        <h3 class="section-title">No Active Budget</h3>
+                    </div>
+                    <p style="font-size: 0.875rem; color: var(--text-muted);">
+                        You need an active budget before setting category limits.
+                        <a href="/dashboard" style="color: var(--primary); font-weight: 600;">Go to Dashboard to create one</a>.
+                    </p>
+                </div>
+
+                <div id="budgetContent" style="display: none;">
+
                 <!-- BUDGET SUMMARY CARDS -->
-                <div class="summary-grid">
+                <div class="summary-grid" style="grid-template-columns: repeat(3, 1fr);">
                     <div class="card summary-card">
                         <div class="card-header">
-                            <span class="title">Total Monthly Budget</span>
+                            <span class="title">Total Budget — <span id="budgetEventName">Budget</span></span>
                         </div>
-                        <div class="amount">RM 1,500.00</div>
-                        <div class="progress-bar" style="margin-top: 12px;"><div class="progress-fill" style="width: 62%; background: var(--primary);"></div></div>
-                        <div style="margin-top: 8px; font-size: 0.75rem; color: var(--text-muted);">62% utilized across all categories</div>
+                        <div class="amount" id="budgetTotal">—</div>
+                        <div class="progress-bar" style="margin-top: 12px;">
+                            <div class="progress-fill" id="budgetTotalFill" style="width: 0%; background: var(--primary);"></div>
+                        </div>
+                        <div style="margin-top: 8px; font-size: 0.75rem; color: var(--text-muted);" id="budgetUtilisation">—</div>
+                    </div>
+
+                    <div class="card summary-card">
+                        <div class="card-header">
+                            <span class="title">Total Spent</span>
+                        </div>
+                        <div class="amount" id="budgetSpent">—</div>
+                        <span class="sub-text">Across all logged expenses</span>
                     </div>
 
                     <div class="card summary-card">
                         <div class="card-header">
                             <span class="title">Remaining Funds</span>
                         </div>
-                        <div class="amount" style="color: var(--success-text);">RM 565.50</div>
+                        <div class="amount" id="budgetRemaining" style="color: var(--success-text);">—</div>
                         <div>
-                            <span class="badge green">On Track</span>
-                            <span class="sub-text">To end of August</span>
+                            <span class="badge green" id="budgetStatusBadge">On Track</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="middle-grid">
-                    <!-- EDIT ALLOCATIONS -->
-                    <div class="card">
-                        <div class="section-header">
+                <!-- CATEGORY ALLOCATIONS -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="section-header">
+                        <div>
                             <h3 class="section-title">Category Allocations</h3>
-                        </div>
-                        
-                        <div class="breakdown-list">
-                            <div class="breakdown-item">
-                                <div class="breakdown-info">
-                                    <div class="category-name"><div class="dot" style="background: var(--color-food);"></div> Food & Groceries (Meal Prep)</div>
-                                    <div class="amount-val">RM 400.00</div>
-                                </div>
-                                <div class="budget-input-group">
-                                    <input type="number" class="budget-input" value="400" placeholder="New limit...">
-                                    <button class="btn-save">Update</button>
-                                </div>
-                            </div>
-
-                            <div class="breakdown-item">
-                                <div class="breakdown-info">
-                                    <div class="category-name"><div class="dot" style="background: var(--color-books);"></div> Cybersecurity Materials & Tech</div>
-                                    <div class="amount-val">RM 250.00</div>
-                                </div>
-                                <div class="budget-input-group">
-                                    <input type="number" class="budget-input" value="250" placeholder="New limit...">
-                                    <button class="btn-save">Update</button>
-                                </div>
-                            </div>
+                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+                                Allocated <strong id="allocatedTotal">—</strong> &middot;
+                                Unallocated <strong id="unallocatedTotal">—</strong>
+                            </p>
                         </div>
                     </div>
 
-                    <!-- SAVINGS GOALS -->
-                    <div class="card">
-                        <div class="section-header">
-                            <h3 class="section-title">Active Savings Goals</h3>
-                        </div>
-                        
-                        <div class="breakdown-list">
-                            <div class="breakdown-item" style="margin-bottom: 20px;">
-                                <div class="breakdown-info">
-                                    <div class="category-name">2026-2027 Academic Session Cushion</div>
-                                    <div class="amount-val" style="font-size: 0.75rem; color: var(--text-muted);">RM 800 / RM 2,000</div>
-                                </div>
-                                <div class="progress-bar"><div class="progress-fill" style="width: 40%; background: var(--primary);"></div></div>
-                            </div>
-
-                            <div class="breakdown-item" style="margin-bottom: 20px;">
-                                <div class="breakdown-info">
-                                    <div class="category-name">ASNB & Moomoo Investment Transfer</div>
-                                    <div class="amount-val" style="font-size: 0.75rem; color: var(--text-muted);">RM 300 / RM 500</div>
-                                </div>
-                                <div class="progress-bar"><div class="progress-fill" style="width: 60%; background: var(--success-text);"></div></div>
-                            </div>
-
-                            <div class="breakdown-item">
-                                <div class="breakdown-info">
-                                    <div class="category-name">Coffee Cart & Espresso Equipment Fund</div>
-                                    <div class="amount-val" style="font-size: 0.75rem; color: var(--text-muted);">RM 1,200 / RM 6,000</div>
-                                </div>
-                                <div class="progress-bar"><div class="progress-fill" style="width: 20%; background: var(--warning-text);"></div></div>
-                            </div>
-                        </div>
+                    <div class="breakdown-list" id="allocationList">
+                        <p style="font-size: 0.875rem; color: var(--text-muted); padding: 8px 0;">Loading...</p>
                     </div>
                 </div>
+
+                <!-- ADD A CATEGORY LIMIT -->
+                <div class="card">
+                    <div class="section-header">
+                        <div>
+                            <h3 class="section-title">Set a Category Limit</h3>
+                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+                                Setting a limit for a category that already has one will update it.
+                            </p>
+                        </div>
+                    </div>
+
+                    <form id="addCategoryForm">
+                        <div class="budget-input-group">
+                            <select id="newCategory" class="budget-input" required>
+                                <option value="">Select a category</option>
+                            </select>
+                            <input type="number" id="newCategoryLimit" class="budget-input"
+                                   step="0.01" min="0" placeholder="Limit (RM)" required>
+                            <button type="submit" id="addCategoryBtn" class="btn-save">Set Limit</button>
+                        </div>
+                    </form>
+                </div>
+
+                </div>
+                <!-- /budgetContent -->
 
             </div>
         </main>
     </div>
 <script src="/static/js/budget-context.js"></script>
+<script src="/static/js/budget-page.js"></script>
 </body>
 </html>

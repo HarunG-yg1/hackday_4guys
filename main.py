@@ -91,6 +91,41 @@ class CategoryBreakdownResponse(BaseModel):
     categories: list[CategoryBreakdownItem]
 
 
+# The single source of truth for expense categories. This list must stay in
+# sync with the <select> in expenses.html and CATEGORIES in budget-page.js,
+# otherwise spending will never line up with a category limit.
+EXPENSE_CATEGORIES = [
+    "Food & Groceries",
+    "Books & Education",
+    "Rent & Accommodation",
+    "Entertainment",
+    "Transport",
+    "Savings & Investments",
+]
+
+
+class CategoryLimitUpsert(BaseModel):
+    category: str
+    limit_amount: float
+
+
+class CategoryLimitItem(BaseModel):
+    category: str
+    limit_amount: float
+    spent: float
+    remaining: float
+    percentage: float
+    over_limit: bool
+
+
+class CategoryLimitsResponse(BaseModel):
+    budget_id: str
+    total_allocated: float
+    total_budget: float
+    unallocated: float
+    categories: list[CategoryLimitItem]
+
+
 class QuotationCreate(BaseModel):
     budget_id: str
     vendor_name: str
@@ -99,9 +134,16 @@ class QuotationCreate(BaseModel):
 
 
 class ReimbursementCreate(BaseModel):
-    expense_id: str
+    budget_id: str
     claimant_name: str
+    category: str
+    amount: float
+    description: Optional[str] = None
     status: str = "Pending"
+
+
+class ReimbursementStatusUpdate(BaseModel):
+    status: str
 
 
 # ------------------------------------------------------------------------------
@@ -140,11 +182,6 @@ async def render_dashboard(request: Request):
 @app.get("/expenses-page")
 async def render_expenses(request: Request):
     return render_page_safely(request, "expenses.html", "Expenses")
-
-
-@app.get("/quotations-page")
-async def render_quotations(request: Request):
-    return render_page_safely(request, "quotations.html", "Quotations")
 
 
 @app.get("/reimbursements-page")
@@ -231,6 +268,121 @@ def get_category_analytics(budget_id: str):
 
 
 # ------------------------------------------------------------------------------
+# 5b. Per-Category Budget Limits
+# ------------------------------------------------------------------------------
+@app.get("/budgets/{budget_id}/category-limits", response_model=CategoryLimitsResponse)
+def get_category_limits(budget_id: str):
+    """Every category limit for this budget, joined with actual spend so far.
+
+    Categories that have spending but no limit set are included with a limit of
+    0, so unbudgeted spending is visible rather than hidden.
+    """
+    try:
+        budget_res = (
+            supabase.table("budgets")
+            .select("total_budget")
+            .eq("id", budget_id)
+            .execute()
+        )
+        if not budget_res.data:
+            raise HTTPException(status_code=404, detail="Budget not found")
+        total_budget = float(budget_res.data[0]["total_budget"])
+
+        limits_res = (
+            supabase.table("category_budgets")
+            .select("category, limit_amount")
+            .eq("budget_id", budget_id)
+            .execute()
+        )
+        limits = {
+            row["category"]: float(row["limit_amount"])
+            for row in (limits_res.data or [])
+        }
+
+        expenses_res = (
+            supabase.table("expenses")
+            .select("amount, category")
+            .eq("budget_id", budget_id)
+            .execute()
+        )
+        spent_by_cat: dict[str, float] = {}
+        for e in (expenses_res.data or []):
+            cat = e.get("category") or "Uncategorized"
+            spent_by_cat[cat] = spent_by_cat.get(cat, 0.0) + float(e["amount"])
+
+        categories = []
+        for cat in sorted(set(limits) | set(spent_by_cat)):
+            limit_amount = limits.get(cat, 0.0)
+            spent = spent_by_cat.get(cat, 0.0)
+            pct = round(spent / limit_amount * 100, 2) if limit_amount > 0 else 0.0
+            categories.append({
+                "category": cat,
+                "limit_amount": round(limit_amount, 2),
+                "spent": round(spent, 2),
+                "remaining": round(limit_amount - spent, 2),
+                "percentage": pct,
+                "over_limit": limit_amount > 0 and spent > limit_amount,
+            })
+
+        total_allocated = sum(limits.values())
+        return {
+            "budget_id": budget_id,
+            "total_allocated": round(total_allocated, 2),
+            "total_budget": round(total_budget, 2),
+            "unallocated": round(total_budget - total_allocated, 2),
+            "categories": categories,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/budgets/{budget_id}/category-limits")
+def upsert_category_limit(budget_id: str, item: CategoryLimitUpsert):
+    """Set or update one category's limit. Safe to call repeatedly."""
+    if item.limit_amount < 0:
+        raise HTTPException(status_code=400, detail="limit_amount cannot be negative")
+    if not item.category.strip():
+        raise HTTPException(status_code=400, detail="category cannot be empty")
+
+    try:
+        payload = {
+            "budget_id": budget_id,
+            "category": item.category.strip(),
+            "limit_amount": item.limit_amount,
+        }
+        res = (
+            supabase.table("category_budgets")
+            .upsert(payload, on_conflict="budget_id,category")
+            .execute()
+        )
+        if not res.data:
+            raise HTTPException(status_code=500, detail="Upsert returned no row")
+        return res.data[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/budgets/{budget_id}/category-limits/{category}")
+def delete_category_limit(budget_id: str, category: str):
+    """Remove a category limit. Expenses in that category are untouched."""
+    try:
+        res = (
+            supabase.table("category_budgets")
+            .delete()
+            .eq("budget_id", budget_id)
+            .eq("category", category)
+            .execute()
+        )
+        return {"deleted": len(res.data or [])}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ------------------------------------------------------------------------------
 # 6. Expenses & Gemini OCR Scanner
 # ------------------------------------------------------------------------------
 @app.post("/expenses", status_code=status.HTTP_201_CREATED)
@@ -273,8 +425,10 @@ async def scan_receipt(file: UploadFile = File(...)):
         prompt = (
             "Analyze this receipt image and extract structured financial data. "
             "Identify the merchant/vendor name, the total grand amount paid, "
-            "a suitable expense category (e.g., Food & Beverage, Venue, Marketing, Supplies, Utilities), "
-            "and the transaction date if visible."
+            "and the transaction date if visible. "
+            "For the category, you MUST choose exactly one of these strings, "
+            "copied verbatim: " + ", ".join(EXPENSE_CATEGORIES) + ". "
+            "Pick the closest match; if nothing fits, use Uncategorized."
         )
 
         response = gemini_client.models.generate_content(
@@ -346,17 +500,91 @@ def list_quotations(budget_id: str):
 
 @app.post("/reimbursements", status_code=status.HTTP_201_CREATED)
 def create_reimbursement(claim: ReimbursementCreate):
+    """Submit a new reimbursement claim against a budget."""
     try:
         res = supabase.table("reimbursements").insert(claim.model_dump()).execute()
+        if not res.data:
+            raise HTTPException(status_code=500, detail="Insert returned no row")
         return res.data[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# NOTE: this must stay ABOVE any /reimbursements/{something} route,
+# otherwise FastAPI matches "stats" as an id.
+@app.get("/reimbursements/stats")
+def reimbursement_stats(budget_id: str):
+    """Live figures for the four cards at the top of the reimbursements page."""
+    try:
+        claims_res = (
+            supabase.table("reimbursements")
+            .select("amount, status")
+            .eq("budget_id", budget_id)
+            .execute()
+        )
+        claims = claims_res.data or []
+
+        total_requests = len(claims)
+        pending_review = sum(1 for c in claims if (c.get("status") or "") == "Pending")
+        approved_amount = sum(
+            float(c["amount"]) for c in claims if (c.get("status") or "") == "Approved"
+        )
+
+        budget_res = (
+            supabase.table("budgets")
+            .select("total_budget")
+            .eq("id", budget_id)
+            .execute()
+        )
+        total_budget = (
+            float(budget_res.data[0]["total_budget"]) if budget_res.data else 0.0
+        )
+
+        return {
+            "total_requests": total_requests,
+            "pending_review": pending_review,
+            "approved_amount": round(approved_amount, 2),
+            "available_budget": round(total_budget - approved_amount, 2),
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/reimbursements")
-def list_reimbursements():
+def list_reimbursements(budget_id: Optional[str] = None):
+    """List claims, newest first. Pass budget_id to scope to one budget."""
     try:
-        res = supabase.table("reimbursements").select("*").execute()
-        return res.data
+        query = supabase.table("reimbursements").select("*")
+        if budget_id:
+            query = query.eq("budget_id", budget_id)
+        res = query.order("created_at", desc=True).execute()
+        return res.data or []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.patch("/reimbursements/{claim_id}/status")
+def update_reimbursement_status(claim_id: str, update: ReimbursementStatusUpdate):
+    """Approve or reject a claim."""
+    allowed = {"Pending", "Approved", "Rejected"}
+    if update.status not in allowed:
+        raise HTTPException(
+            status_code=400,
+            detail=f"status must be one of {sorted(allowed)}",
+        )
+    try:
+        res = (
+            supabase.table("reimbursements")
+            .update({"status": update.status})
+            .eq("id", claim_id)
+            .execute()
+        )
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Reimbursement not found")
+        return res.data[0]
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
