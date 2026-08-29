@@ -1,0 +1,11 @@
+<head>
+    <link rel="stylesheet" href="/static/css/main-unified.css">
+    
+    {% if page == 'budget' %}
+        <link rel="stylesheet" href="/static/css/budget.css">
+    {% elif page == 'expenses' %}
+        <link rel="stylesheet" href="/static/css/expenses.css">
+    {% elif page == 'reimbursements' %}
+        <link rel="stylesheet" href="/static/css/reimbursement.css">
+    {% endif %}
+</head>

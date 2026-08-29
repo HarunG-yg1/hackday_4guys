@@ -1,230 +1,60 @@
-# FastAPI Backend Setup
+# 🚀 HackDay 2026 - AI-Powered Expense & Budget Tracker
 
-This guide explains how to set up the FastAPI backend locally.
-
-## 1. Prerequisites
-
-Make sure Python 3 is installed:
-
-```bash
-python3 --version
-```
-
-If Python is not installed on Ubuntu/Debian:
-
-```bash
-sudo apt update
-sudo apt install python3 python3-full
-```
+An intelligent event expense management system built for **HackDay 2026**. This application allows organizers to set event budgets, log expenses, run automated multi-modal receipt parsing via **Google Gemini 3.6 Flash OCR**, and view real-time spending analytics.
 
 ---
 
-## 2. Clone the Repository
+## ✨ Features
 
-```bash
-git clone <YOUR_REPOSITORY_URL>
-cd <YOUR_PROJECT_FOLDER>
-```
+* **Event Budget Management**: Set up custom budgets and define alert thresholds (e.g., notify when 80% of budget is spent).
+* **AI Receipt OCR (`Gemini 3.6 Flash`)**: Extract merchant name, total amount, category, and date automatically from receipt images (`.jpg`, `.jpeg`, `.png`, `.webp`).
+* **Auto-Log OCR Endpoint**: Scan a receipt image and immediately store the parsed expense directly into the database in a single step.
+* **Category Spending Analytics**: Real-time spending breakdowns and percentage distributions per category for frontend chart integration.
 
 ---
 
-## 3. Create a Virtual Environment
+## 🛠️ Tech Stack
 
-We use a virtual environment so that Python packages for this project do not interfere with the system Python or other projects.
+* **Backend Framework**: [FastAPI](https://fastapi.tiangolo.com/) (Python 3.12)
+* **ASGI Server**: [Uvicorn](https://www.uvicorn.org/)
+* **Database**: [Supabase](https://supabase.com/) (PostgreSQL)
+* **AI Engine**: [Google Gemini API](https://ai.google.dev/) (`gemini-3.6-flash`)
+* **Data Validation**: Pydantic v2
 
+---
+
+## 📦 Project Setup & Installation
+
+### 1. Prerequisites
+* Python 3.10+ installed
+* Supabase project credentials (URL & Service/Anon Key)
+* Gemini API Key
+
+### 2. Clone the Repository
 ```bash
+git clone <your-repo-url>
+cd hackday_4guys
+
+### 3. Setup Virtual Environment
 python3 -m venv .venv
-```
+source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
 
-This creates:
-
-```text
-project/
-├── .venv/
-└── ...
-```
-
-> **Note:** `.venv` should not be committed to Git.
-
----
-
-## 4. Activate the Virtual Environment
-
-### Linux / macOS
-
-```bash
-source .venv/bin/activate
-```
-
-### Windows
-
-**Command Prompt:**
-
-```cmd
-.venv\Scripts\activate
-```
-
-**PowerShell:**
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-After activation, you should see `(.venv)` at the beginning of your terminal:
-
-```text
-(.venv) user@computer:~/project$
-```
-
----
-
-## 5. Install Dependencies
-
-With the virtual environment activated:
-
-```bash
-pip install fastapi uvicorn
-```
-
-If the project already contains a `requirements.txt`, use:
-
-```bash
+### 4. Install Dependencies
 pip install -r requirements.txt
-```
 
----
+### 5. Configure Environment Variables
+Create a .env file in the root folder based on .env.example:
+SUPABASE_URL="[https://your-supabase-project.supabase.co](https://your-supabase-project.supabase.co)"
+SUPABASE_KEY="your-supabase-anon-or-service-key"
+GEMINI_API_KEY="your-gemini-api-key"
 
-## 6. Run the FastAPI Server
-
-If the main application is in `main.py` and the FastAPI instance is called `app`:
-
-```bash
+### Running the Application
+Start the development server with auto-reload enabled:
 uvicorn main:app --reload
-```
 
-You should see:
 
-```text
-Uvicorn running on http://127.0.0.1:8000
-```
+The server will start at http://127.0.0.1:8000.
 
-Open:
+Interactive API Documentation (Swagger UI) is available at:
 
-**http://127.0.0.1:8000**
-
----
-
-## 7. API Documentation
-
-FastAPI automatically generates interactive API documentation.
-
-### Swagger UI
-
-Open:
-
-```text
 http://127.0.0.1:8000/docs
-```
-
-### ReDoc
-
-Open:
-
-```text
-http://127.0.0.1:8000/redoc
-```
-
-The `/docs` page can be used to test API endpoints without needing Postman.
-
----
-
-## 8. Installing a New Package
-
-If you add a new Python package:
-
-```bash
-pip install <package-name>
-```
-
-For example:
-
-```bash
-pip install sqlalchemy
-```
-
-After installing a package, update `requirements.txt`:
-
-```bash
-pip freeze > requirements.txt
-```
-
-Then commit the updated `requirements.txt`:
-
-```bash
-git add requirements.txt
-git commit -m "Update dependencies"
-git push
-```
-
----
-
-## 9. Working on the Project Again
-
-Every time you open a new terminal, you need to activate the virtual environment again:
-
-```bash
-cd <YOUR_PROJECT_FOLDER>
-source .venv/bin/activate
-```
-
-You **do not need to reinstall FastAPI** every time.
-
-To leave the virtual environment:
-
-```bash
-deactivate
-```
-
----
-
-## 10. Git Configuration
-
-Do **not** commit `.venv` to GitHub.
-
-Add this to `.gitignore`:
-
-```gitignore
-.venv/
-__pycache__/
-*.pyc
-.env
-```
-
-Your repository should look something like:
-
-```text
-project/
-├── .venv/              # Local only - NOT committed
-├── main.py
-├── requirements.txt
-├── .gitignore
-└── README.md
-```
-
-### Quick Setup
-
-For Linux/macOS, after cloning the repository:
-
-```bash
-cd <YOUR_PROJECT_FOLDER>
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload
-```
-
-Then visit:
-
-```text
-http://127.0.0.1:8000/docs
-```
