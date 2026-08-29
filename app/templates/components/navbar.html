@@ -1,0 +1,92 @@
+<header class="topbar">
+
+    <!-- LEFT -->
+
+    <div class="breadcrumb">
+
+        <span class="breadcrumb-muted">
+            ClubVault
+        </span>
+
+        <span class="breadcrumb-separator">
+            /
+        </span>
+
+        <strong>
+            {{ page_title | default("Dashboard") }}
+        </strong>
+
+    </div>
+
+
+    <!-- RIGHT -->
+
+    <div class="topbar-actions">
+
+
+        <!-- SEARCH -->
+
+        <button class="topbar-search">
+
+            <span class="search-icon">
+                ⌕
+            </span>
+
+            <span>
+                Search anything...
+            </span>
+
+            <kbd>
+                Ctrl K
+            </kbd>
+
+        </button>
+
+
+        <!-- NOTIFICATIONS -->
+
+        <button
+            class="icon-button"
+            aria-label="Notifications"
+        >
+
+            ♢
+
+            <span class="notification-dot"></span>
+
+        </button>
+
+
+        <!-- PROFILE -->
+
+        <button class="profile-menu">
+
+            <div class="profile-avatar">
+
+                {{ user.initials | default("ME") }}
+
+            </div>
+
+
+            <div class="profile-details">
+
+                <strong>
+                    {{ user.name | default("Muhaimin") }}
+                </strong>
+
+                <span>
+                    {{ user.role | default("Club Treasurer") }}
+                </span>
+
+            </div>
+
+
+            <span class="profile-chevron">
+                ⌄
+            </span>
+
+        </button>
+
+    </div>
+
+</header>

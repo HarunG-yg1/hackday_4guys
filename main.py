@@ -40,15 +40,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-<<<<<<< HEAD
-
-
-# ------------------------------------------------------------------------------
-# 1. Environment & Client Setup
-# ------------------------------------------------------------------------------
-=======
 # Supabase Initialization
->>>>>>> fb2978e07f6b448ffdc344de6cdc39986b8d8dd1
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
 
