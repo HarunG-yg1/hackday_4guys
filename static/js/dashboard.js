@@ -116,11 +116,14 @@ async function loadBreakdown(budgetId) {
 
         if (!data.categories.length) {
             list.innerHTML = emptyNote('No expenses logged yet. Add one on the Expenses page.');
+            renderDonut([], 0);
             return;
         }
 
         // Biggest spender first.
         data.categories.sort((a, b) => b.total_spent - a.total_spent);
+
+        renderDonut(data.categories, data.total_spent);
 
         list.innerHTML = data.categories.map(cat => {
             const color = CATEGORY_COLORS[cat.category] || 'var(--text-muted)';
@@ -255,6 +258,89 @@ async function loadActivity(budgetId) {
         console.error('Error loading activity:', error);
         tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 24px; color: var(--danger-text, #dc2626);">Failed to load activity.</td></tr>`;
     }
+}
+
+
+
+// CSS custom properties do NOT work in SVG presentation attributes like
+// stroke="". They only resolve inside CSS property values. So read the real
+// computed value off :root and pass that instead.
+const COLOR_FALLBACKS = {
+    '--color-food': '#10b981',
+    '--color-books': '#8b5cf6',
+    '--color-rent': '#ef4444',
+    '--color-entertainment': '#f59e0b',
+    '--color-transport': '#3b82f6',
+    '--primary': '#6366f1',
+    '--text-muted': '#94a3b8',
+    '--text-main': '#1e293b',
+    '--border-light': '#e5e7eb'
+};
+
+function resolveColor(value) {
+    const match = /^var\(\s*(--[\w-]+)\s*\)$/.exec(String(value).trim());
+    if (!match) return value;
+    const name = match[1];
+    const computed = getComputedStyle(document.documentElement)
+        .getPropertyValue(name)
+        .trim();
+    return computed || COLOR_FALLBACKS[name] || '#94a3b8';
+}
+
+// ------------------------------------------------------------------ donut
+// Hand-drawn SVG donut. No charting library, so no build step and nothing
+// extra to load. Each slice is an arc path; the hole is just a smaller radius
+// with a thick stroke.
+function renderDonut(categories, totalSpent) {
+    const svg = document.getElementById('dashDonut');
+    const legend = document.getElementById('dashChartLegend');
+    if (!svg || !legend) return;
+
+    if (!categories.length || totalSpent <= 0) {
+        svg.innerHTML = `
+            <circle cx="100" cy="100" r="70" fill="none"
+                    stroke="${resolveColor('var(--border-light)')}" stroke-width="34"></circle>
+            <text x="100" y="105" text-anchor="middle"
+                  fill="${resolveColor('var(--text-muted)')}" font-size="13">No data</text>`;
+        legend.innerHTML = '';
+        return;
+    }
+
+    const cx = 100, cy = 100, radius = 70, stroke = 34;
+    const circumference = 2 * Math.PI * radius;
+
+    let offset = 0;
+    const slices = categories.map(cat => {
+        const fraction = cat.total_spent / totalSpent;
+        const color = resolveColor(CATEGORY_COLORS[cat.category] || 'var(--text-muted)');
+        // dasharray draws one visible run then a gap for the rest of the ring.
+        const dash = `${(fraction * circumference).toFixed(2)} ${circumference.toFixed(2)}`;
+        const rotation = (offset * 360) - 90; // -90 so the first slice starts at 12 o'clock
+        offset += fraction;
+
+        return `<circle cx="${cx}" cy="${cy}" r="${radius}" fill="none"
+                        stroke="${color}" stroke-width="${stroke}"
+                        stroke-dasharray="${dash}"
+                        transform="rotate(${rotation.toFixed(2)} ${cx} ${cy})">
+                    <title>${escapeHtml(cat.category)}: ${money(cat.total_spent)} (${cat.percentage.toFixed(1)}%)</title>
+                </circle>`;
+    });
+
+    svg.innerHTML = slices.join('') + `
+        <text x="${cx}" y="${cy - 4}" text-anchor="middle"
+              fill="${resolveColor('var(--text-muted)')}" font-size="11" letter-spacing="0.5">TOTAL</text>
+        <text x="${cx}" y="${cy + 16}" text-anchor="middle"
+              fill="${resolveColor('var(--text-main)')}" font-size="17" font-weight="700">${money(totalSpent)}</text>`;
+
+    legend.innerHTML = categories.map(cat => {
+        const color = CATEGORY_COLORS[cat.category] || 'var(--text-muted)';
+        return `
+            <div class="legend-item">
+                <span class="legend-dot" style="background: ${color};"></span>
+                <span class="legend-label">${escapeHtml(cat.category)}</span>
+                <span class="legend-value">${cat.percentage.toFixed(1)}%</span>
+            </div>`;
+    }).join('');
 }
 
 // ---------------------------------------------------------------- helpers
