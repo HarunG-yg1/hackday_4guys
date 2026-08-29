@@ -1,0 +1,59 @@
+{% if alert_message %}
+
+<div
+    class="alert alert-{{ alert_type | default('info') }}"
+    role="alert"
+>
+
+    <div class="alert-icon">
+
+        {% if alert_type == "success" %}
+
+            ✓
+
+        {% elif alert_type == "warning" %}
+
+            !
+
+        {% elif alert_type == "error" %}
+
+            ×
+
+        {% else %}
+
+            i
+
+        {% endif %}
+
+    </div>
+
+
+    <div class="alert-content">
+
+        <strong>
+
+            {{ alert_title | default("Information") }}
+
+        </strong>
+
+        <p>
+
+            {{ alert_message }}
+
+        </p>
+
+    </div>
+
+
+    <button
+        class="alert-close"
+        onclick="this.closest('.alert').remove()"
+    >
+
+        ×
+
+    </button>
+
+</div>
+
+{% endif %}
