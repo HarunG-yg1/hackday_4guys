@@ -89,7 +89,7 @@ pip install fastapi uvicorn
 If the project already contains a `requirements.txt`, use:
 
 ```bash
-pip install -r requirements.txt
+prequirements.txtip install -r
 ```
 
 ---
