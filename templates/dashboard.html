@@ -10,8 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Local CSS Links / /static/css/main-unified.css-->
-    <link rel="stylesheet" href="main.css">
+    <link rel="stylesheet" href="/static/css/main.css">
 </head>
 <body>
     <div class="app-container">
@@ -28,24 +27,24 @@
 
             <nav class="navigation">
                 <p class="nav-label">MAIN MENU</p>
-                <a href="dashboard.html" class="nav-item active">
+                <a href="/dashboard" class="nav-item active">
                     <span class="nav-icon">⌂</span>
                     <span>Dashboard</span>
                 </a>
-                <a href="expenses.html" class="nav-item">
+                <a href="/expenses-page" class="nav-item">
                     <span class="nav-icon">◫</span>
                     <span>Expenses</span>
                 </a>
-                <a href="reimbursements.html" class="nav-item">
+                <a href="/reimbursements-page" class="nav-item">
                     <span class="nav-icon">↗</span>
                     <span>Reimbursements</span>
                 </a>
-                <a href="budget.html" class="nav-item">
+                <a href="/budget-page" class="nav-item">
                     <span class="nav-icon">◈</span>
                     <span>Budgets</span>
                 </a>
                 <p class="nav-label">MANAGEMENT</p>
-                <a href="settings.html" class="nav-item">
+                <a href="/settings-page" class="nav-item">
                     <span class="nav-icon">⚙</span>
                     <span>Settings</span>
                 </a>
@@ -88,6 +87,32 @@
                         Finance Overview
                     </h1>
                 </div>
+
+                <!-- CREATE BUDGET (shown only when no budget is active yet) -->
+                <div id="createBudgetCard" class="card" style="display: none; margin-bottom: 24px;">
+                    <div class="section-header">
+                        <h3 class="section-title">Create Your Club Budget</h3>
+                    </div>
+                    <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 16px;">
+                        No active budget yet. Set one up to start tracking spending, alerts, and reimbursements.
+                    </p>
+                    <form id="createBudgetForm">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Event / budget name</label>
+                                <input type="text" id="eventName" placeholder="e.g. August 2026 Operations" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Total budget (RM)</label>
+                                <input type="number" id="totalAmount" step="0.01" placeholder="1500.00" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary" style="margin-top: 16px;">Create Budget</button>
+                    </form>
+                </div>
+
+                <!-- MAIN DASHBOARD CONTENT (shown once a budget is active) -->
+                <div id="dashboardContent" style="display: none;">
 
                 <!-- SUMMARY CARDS -->
                 <div class="summary-grid">
@@ -258,10 +283,14 @@
                     </div>
                 </div>
 
+                </div>
+                <!-- /dashboardContent -->
+
             </div>
         </main>
     </div>
+<script src="/static/js/budget-context.js"></script>
+<script src="/static/js/budget.js"></script>
 <script src="/static/js/dashboard.js"></script>
-
 </body>
 </html>

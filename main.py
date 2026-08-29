@@ -25,11 +25,11 @@ load_dotenv(dotenv_path=env_path, override=True)
 app = FastAPI(title="ClubVault API", version="1.0.0")
 
 # Mount static assets if folder exists
-static_dir = BASE_DIR / "app" / "static"
+static_dir = BASE_DIR / "static"
 if static_dir.exists():
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-templates_dir = BASE_DIR / "app" / "templates"
+templates_dir = BASE_DIR / "templates"
 templates = Jinja2Templates(directory=templates_dir) if templates_dir.exists() else None
 
 app.add_middleware(
@@ -150,6 +150,15 @@ async def render_quotations(request: Request):
 @app.get("/reimbursements-page")
 async def render_reimbursements(request: Request):
     return render_page_safely(request, "reimbursements.html", "Reimbursements")
+
+@app.get("/budget-page")
+async def render_budget(request: Request):
+    return render_page_safely(request, "budget.html", "Budgets")
+
+
+@app.get("/settings-page")
+async def render_settings(request: Request):
+    return render_page_safely(request, "settings.html", "Settings")
 
 
 # ------------------------------------------------------------------------------

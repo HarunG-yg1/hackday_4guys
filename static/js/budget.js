@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const newBudget = await createBudget(eventName, totalAmount);
                 // Success: Route to the new budget dashboard
-                window.location.href = `dashboard.html?budgetId=${newBudget.id}`;
+                window.location.href = `/dashboard?budgetId=${newBudget.id}`;
             } catch (error) {
                 console.error('Failed to create budget:', error);
                 alert('Failed to create budget. Check console for details.');

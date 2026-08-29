@@ -6,21 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ClubVault - Settings</title>
 
-```
-<!-- Google Fonts -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="/static/css/main.css">
-```
+    <link rel="stylesheet" href="/static/css/main.css">
 
 </head>
 
 <body>
     <div class="app-container">
 
-```
     <!-- SIDEBAR -->
     <aside class="sidebar">
         <div class="brand">
@@ -34,38 +31,30 @@
             </div>
         </div>
 
-        <nav class="navigation">
-
-            <p class="nav-label">MAIN MENU</p>
-
-            <a href="dashboard.html" class="nav-item">
-                <span class="nav-icon">⌂</span>
-                <span>Dashboard</span>
-            </a>
-
-            <a href="expenses.html" class="nav-item">
-                <span class="nav-icon">◫</span>
-                <span>Expenses</span>
-            </a>
-
-            <a href="reimbursements.html" class="nav-item">
-                <span class="nav-icon">↗</span>
-                <span>Reimbursements</span>
-            </a>
-
-            <a href="budget.html" class="nav-item">
-                <span class="nav-icon">◈</span>
-                <span>Budgets</span>
-            </a>
-
-            <p class="nav-label">MANAGEMENT</p>
-
-            <a href="settings.html" class="nav-item active">
-                <span class="nav-icon">⚙</span>
-                <span>Settings</span>
-            </a>
-
-        </nav>
+            <nav class="navigation">
+                <p class="nav-label">MAIN MENU</p>
+                <a href="/dashboard" class="nav-item active">
+                    <span class="nav-icon">⌂</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/expenses-page" class="nav-item">
+                    <span class="nav-icon">◫</span>
+                    <span>Expenses</span>
+                </a>
+                <a href="/reimbursements-page" class="nav-item">
+                    <span class="nav-icon">↗</span>
+                    <span>Reimbursements</span>
+                </a>
+                <a href="/budget-page" class="nav-item">
+                    <span class="nav-icon">◈</span>
+                    <span>Budgets</span>
+                </a>
+                <p class="nav-label">MANAGEMENT</p>
+                <a href="/settings-page" class="nav-item">
+                    <span class="nav-icon">⚙</span>
+                    <span>Settings</span>
+                </a>
+            </nav>
     </aside>
 
 
@@ -766,7 +755,6 @@
     </main>
 
 </div>
-```
-
+<script src="/static/js/budget-context.js"></script>
 </body>
 </html>

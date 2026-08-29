@@ -9,8 +9,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="main.css">
-    <link rel="stylesheet" href="expenses.css">
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/expenses.css">
 
     <style>
         .form-grid {
@@ -59,6 +59,16 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
         }
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .form-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
     </style>
 </head>
 <body>
@@ -76,24 +86,24 @@
 
             <nav class="navigation">
                 <p class="nav-label">MAIN MENU</p>
-                <a href="dashboard.html" class="nav-item">
+                <a href="/dashboard" class="nav-item">
                     <span class="nav-icon">⌂</span>
                     <span>Dashboard</span>
                 </a>
-                <a href="expenses.html" class="nav-item active">
+                <a href="/expenses-page" class="nav-item active">
                     <span class="nav-icon">◫</span>
                     <span>Expenses</span>
                 </a>
-                <a href="reimbursements.html" class="nav-item">
+                <a href="/reimbursements-page" class="nav-item">
                     <span class="nav-icon">↗</span>
                     <span>Reimbursements</span>
                 </a>
-                <a href="budget.html" class="nav-item">
+                <a href="/budget-page" class="nav-item">
                     <span class="nav-icon">◈</span>
                     <span>Budgets</span>
                 </a>
                 <p class="nav-label">MANAGEMENT</p>
-                <a href="settings.html" class="nav-item">
+                <a href="/settings-page" class="nav-item">
                     <span class="nav-icon">⚙</span>
                     <span>Settings</span>
                 </a>
@@ -135,48 +145,57 @@
                     </h1>
                 </div>
 
+                <!-- NO BUDGET WARNING (shown only if no budget is active) -->
+                <div id="noBudgetCard" class="card" style="display: none; margin-bottom: 24px;">
+                    <div class="section-header">
+                        <h3 class="section-title">No Active Budget</h3>
+                    </div>
+                    <p style="font-size: 0.875rem; color: var(--text-muted);">
+                        You need an active budget before logging expenses.
+                        <a href="/dashboard" style="color: var(--primary); font-weight: 600;">Go to Dashboard to create one</a>.
+                    </p>
+                </div>
+
+                <div id="expensesContent" style="display: none;">
+
                 <!-- ADD EXPENSE FORM -->
                 <div class="card" style="margin-bottom: 24px;">
                     <div class="section-header">
                         <h3 class="section-title">Record New Expense</h3>
                     </div>
                     
-                    <form>
+                    <form id="expenseForm">
                         <div class="form-grid">
                             <div class="form-group full">
-                                <label>Description</label>
-                                <input type="text" placeholder="What did you pay for?">
+                                <label for="expenseDescription">Description</label>
+                                <input type="text" id="expenseDescription" placeholder="What did you pay for?" required>
                             </div>
                             
                             <div class="form-group">
-                                <label>Amount (RM)</label>
-                                <input type="number" step="0.01" placeholder="0.00">
+                                <label for="expenseAmount">Amount (RM)</label>
+                                <input type="number" id="expenseAmount" step="0.01" placeholder="0.00" required>
                             </div>
                             
                             <div class="form-group">
-                                <label>Category</label>
-                                <select>
-                                    <option>Food & Groceries</option>
-                                    <option>Books & Education</option>
-                                    <option>Rent & Accommodation</option>
-                                    <option>Entertainment</option>
-                                    <option>Transport</option>
-                                    <option>Savings & Investments</option>
+                                <label for="expenseCategory">Category</label>
+                                <select id="expenseCategory" required>
+                                    <option value="Food & Groceries">Food & Groceries</option>
+                                    <option value="Books & Education">Books & Education</option>
+                                    <option value="Rent & Accommodation">Rent & Accommodation</option>
+                                    <option value="Entertainment">Entertainment</option>
+                                    <option value="Transport">Transport</option>
+                                    <option value="Savings & Investments">Savings & Investments</option>
                                 </select>
                             </div>
-                            
-                            <div class="form-group">
-                                <label>Date</label>
-                                <input type="date" value="2026-08-29">
-                            </div>
 
-                            <div class="form-group">
-                                <label>Upload Receipt</label>
-                                <input type="file" accept=".pdf,.png,.jpg" style="padding: 9px 16px;">
+                            <div class="form-group full">
+                                <label for="expenseReceipt">Upload Receipt (optional — auto-fills the fields above via AI scan)</label>
+                                <input type="file" id="expenseReceipt" accept=".png,.jpg,.jpeg,.webp" style="padding: 9px 16px;">
+                                <span class="form-hint">If you attach a receipt image, its detected merchant/amount/category will be used instead of the fields above.</span>
                             </div>
                         </div>
                         
-                        <button type="button" class="btn-submit">Save Expense Transaction</button>
+                        <button type="submit" id="expenseSubmitBtn" class="btn-submit">Save Expense Transaction</button>
                     </form>
                 </div>
 
@@ -197,46 +216,23 @@
                                     <th>Date</th>
                                     <th>Description</th>
                                     <th>Category</th>
-                                    <th>Status</th>
                                     <th>Amount</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="td-date">Aug 28, 2026</td>
-                                    <td class="td-desc">ASNB Monthly Deposit Transfer</td>
-                                    <td><span class="cat-badge" style="background: #e0f2fe; color: #0284c7;">Savings</span></td>
-                                    <td><span class="badge green">Cleared</span></td>
-                                    <td>-RM 150.00</td>
-                                </tr>
-                                <tr>
-                                    <td class="td-date">Aug 26, 2026</td>
-                                    <td class="td-desc">Baking Ingredients (Mascarpone & Ladyfingers for Tiramisu)</td>
-                                    <td><span class="cat-badge" style="background: #dcfce7; color: #16a34a;">Food</span></td>
-                                    <td><span class="badge green">Cleared</span></td>
-                                    <td>-RM 68.50</td>
-                                </tr>
-                                <tr>
-                                    <td class="td-date">Aug 24, 2026</td>
-                                    <td class="td-desc">Ethical Hacking Course Resources</td>
-                                    <td><span class="cat-badge" style="background: #f3e8ff; color: #7e22ce;">Books</span></td>
-                                    <td><span class="badge green">Cleared</span></td>
-                                    <td>-RM 115.00</td>
-                                </tr>
-                                <tr>
-                                    <td class="td-date">Aug 20, 2026</td>
-                                    <td class="td-desc">Gym Membership Renewal</td>
-                                    <td><span class="cat-badge" style="background: #fef3c7; color: #d97706;">Entertainment</span></td>
-                                    <td><span class="badge red">Pending</span></td>
-                                    <td>-RM 95.00</td>
-                                </tr>
+                            <tbody id="expenseTableBody">
+                                <tr><td colspan="4" style="text-align:center; padding: 24px; color: var(--text-muted);">Loading...</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
 
+                </div>
+                <!-- /expensesContent -->
+
             </div>
         </main>
     </div>
+<script src="/static/js/budget-context.js"></script>
+<script src="/static/js/expenses.js"></script>
 </body>
 </html>

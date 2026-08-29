@@ -1,15 +1,20 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Get Budget ID from URL (e.g., dashboard.html?budgetId=123)
-    const urlParams = new URLSearchParams(window.location.search);
-    const currentBudgetId = urlParams.get('budgetId') || 'default-budget-id'; // Replace with actual default handling
+    const createCard = document.getElementById('createBudgetCard');
+    const dashboardContent = document.getElementById('dashboardContent');
+    const budgetId = window.getBudgetId ? window.getBudgetId() : null;
 
-    // 2. Initialize Dashboard
-    if (currentBudgetId) {
-        loadBudgetSummary(currentBudgetId);
-        loadAnalyticsBreakdown(currentBudgetId);
+    if (!budgetId) {
+        // No budget yet — show the create-budget form instead of the dashboard.
+        createCard.style.display = 'block';
+        dashboardContent.style.display = 'none';
+    } else {
+        createCard.style.display = 'none';
+        dashboardContent.style.display = 'block';
+        loadBudgetSummary(budgetId);
+        loadAnalyticsBreakdown(budgetId);
     }
 
-    // 3. UI Interactions: Ctrl + K Search
+    // UI Interactions: Ctrl + K Search
     document.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
             e.preventDefault();
@@ -27,17 +32,22 @@ async function loadBudgetSummary(budgetId) {
         const data = await response.json();
 
         // Update Summary Cards
-        document.querySelectorAll('.summary-card .amount')[1].textContent = `RM ${data.budget.total_budget.toFixed(2)}`;
-        document.querySelectorAll('.summary-card .amount')[2].textContent = `RM ${data.total_spent.toFixed(2)}`;
-        
+        const amounts = document.querySelectorAll('#dashboardContent .summary-card .amount');
+        if (amounts[1]) amounts[1].textContent = `RM ${data.budget.total_budget.toFixed(2)}`;
+        if (amounts[2]) amounts[2].textContent = `RM ${data.total_spent.toFixed(2)}`;
+
         // Update Alert Box if threshold is reached
-        const alertBox = document.querySelector('.alert-box .alert-icon.red').closest('.alert-box');
-        if (data.alert_triggered) {
-            alertBox.style.display = 'flex';
-            alertBox.querySelector('h4').textContent = 'Budget Threshold Alert';
-            alertBox.querySelector('p').textContent = `You have spent RM ${data.total_spent.toFixed(2)} of your RM ${data.budget.total_budget.toFixed(2)} allocation.`;
-        } else {
-            alertBox.style.display = 'none'; // Hide if under budget
+        const alertIcon = document.querySelector('#dashboardContent .alert-box .alert-icon.red');
+        const alertBox = alertIcon ? alertIcon.closest('.alert-box') : null;
+        if (alertBox) {
+            if (data.alert_triggered) {
+                alertBox.style.display = 'flex';
+                alertBox.querySelector('h4').textContent = 'Budget Threshold Alert';
+                alertBox.querySelector('p').textContent =
+                    `You have spent RM ${data.total_spent.toFixed(2)} of your RM ${data.budget.total_budget.toFixed(2)} allocation.`;
+            } else {
+                alertBox.style.display = 'none'; // Hide if under budget
+            }
         }
     } catch (error) {
         console.error('Error loading budget summary:', error);
@@ -52,8 +62,8 @@ async function loadAnalyticsBreakdown(budgetId) {
         const analytics = await response.json();
 
         // Update the custom HTML progress bars
-        const breakdownItems = document.querySelectorAll('.breakdown-item');
-        
+        const breakdownItems = document.querySelectorAll('#dashboardContent .breakdown-item');
+
         analytics.categories.forEach(catData => {
             // Find the matching HTML element by category name
             const item = Array.from(breakdownItems).find(el => el.textContent.includes(catData.category));
