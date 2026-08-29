@@ -1,0 +1,254 @@
+<section class="expense-card">
+
+    <!-- HEADER -->
+
+    <div class="expense-header">
+
+        <div class="expense-title">
+
+            <div class="section-icon">
+                ◫
+            </div>
+
+            <div>
+
+                <h2>
+                    Recent requests
+                </h2>
+
+                <p>
+                    Track reimbursement activity from your club.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- SEARCH / FILTER -->
+
+        <div class="table-controls">
+
+            <div class="search-box">
+
+                <span>
+                    ⌕
+                </span>
+
+                <input
+                    type="search"
+                    placeholder="Search requests..."
+                >
+
+            </div>
+
+
+            <button class="filter-btn">
+
+                ☷ Filter
+
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- TABLE -->
+
+    <div class="table-wrapper">
+
+        <table class="expense-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>
+                        EXPENSE
+                    </th>
+
+                    <th>
+                        REQUESTER
+                    </th>
+
+                    <th>
+                        DATE
+                    </th>
+
+                    <th>
+                        AMOUNT
+                    </th>
+
+                    <th>
+                        STATUS
+                    </th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody>
+
+                {% for expense in expenses %}
+
+                <tr>
+
+
+                    <!-- EXPENSE -->
+
+                    <td>
+
+                        <div class="request-info">
+
+                            <div class="request-icon">
+
+                                {{ expense.icon | default("◫") }}
+
+                            </div>
+
+                            <div>
+
+                                <strong>
+                                    {{ expense.description }}
+                                </strong>
+
+                                <span>
+                                    {{ expense.category }}
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </td>
+
+
+                    <!-- REQUESTER -->
+
+                    <td>
+
+                        <div class="person">
+
+                            <div class="table-avatar">
+
+                                {{ expense.initials }}
+
+                            </div>
+
+                            {{ expense.requester }}
+
+                        </div>
+
+                    </td>
+
+
+                    <!-- DATE -->
+
+                    <td>
+                        {{ expense.date }}
+                    </td>
+
+
+                    <!-- AMOUNT -->
+
+                    <td>
+
+                        <strong>
+                            RM {{ "%.2f"|format(expense.amount) }}
+                        </strong>
+
+                    </td>
+
+
+                    <!-- STATUS -->
+
+                    <td>
+
+                        <span
+                            class="status
+                            {{ expense.status | lower }}"
+                        >
+
+                            <i></i>
+
+                            {{ expense.status }}
+
+                        </span>
+
+                    </td>
+
+
+                </tr>
+
+                {% else %}
+
+                <tr>
+
+                    <td
+                        colspan="5"
+                        class="empty-state"
+                    >
+
+                        <div class="empty-icon">
+                            ◫
+                        </div>
+
+                        <strong>
+                            No expenses yet
+                        </strong>
+
+                        <span>
+                            Submitted expenses will appear here.
+                        </span>
+
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+
+    <!-- FOOTER -->
+
+    <div class="table-footer">
+
+        <span>
+
+            Showing
+
+            <strong>
+                {{ expenses | length }}
+            </strong>
+
+            requests
+
+        </span>
+
+
+        <div class="pagination">
+
+            <button disabled>
+                ←
+            </button>
+
+            <button class="current">
+                1
+            </button>
+
+            <button>
+                →
+            </button>
+
+        </div>
+
+    </div>
+
+</section>

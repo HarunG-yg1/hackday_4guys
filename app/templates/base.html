@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        ClubVault - {% block title %}Dashboard{% endblock %}
+    </title>
+
+    <!-- Shared component CSS -->
+    <link
+        rel="stylesheet"
+        href="/static/css/components.css"
+    >
+
+    <!-- Page-specific CSS -->
+    {% block css %}
+    {% endblock %}
+
+</head>
+
+
+<body>
+
+    <!-- ================= SIDEBAR ================= -->
+
+    {% include "components/sidebar.html" %}
+
+
+    <!-- ================= MAIN ================= -->
+
+    <main class="main">
+
+        <!-- NAVBAR -->
+
+        {% include "components/navbar.html" %}
+
+
+        <!-- PAGE CONTENT -->
+
+        <div class="content">
+
+            <!-- ALERT -->
+
+            {% include "components/alert.html" %}
+
+
+            <!-- Individual page goes here -->
+
+            {% block content %}
+            {% endblock %}
+
+        </div>
+
+    </main>
+
+
+</body>
+
+</html>
