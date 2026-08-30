@@ -1,0 +1,535 @@
+/* ==========================================================================
+   BUDGET PAGE STYLES (DARK THEME)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. GLOBAL PAGE LAYOUT & TYPOGRAPHY
+   -------------------------------------------------------------------------- */
+.content-pad {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    background-color: #0f172a;
+    min-height: calc(100vh - 70px);
+    color: #f8fafc;
+}
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.page-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #f8fafc;
+    margin: 0 0 4px 0;
+}
+
+.sub-text {
+    font-size: 0.875rem;
+    color: #94a3b8;
+    margin: 0;
+}
+
+.sub-text strong {
+    color: #f8fafc;
+}
+
+.flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.event-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   2. PROFILE & USER MENU
+   -------------------------------------------------------------------------- */
+.profile-menu {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.profile-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #3b82f6;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.profile-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.profile-name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.profile-name-row strong {
+    font-size: 0.875rem;
+    color: #f8fafc;
+}
+
+.profile-email {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+/* Role Badges */
+.role-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.03em;
+}
+
+.role-badge.admin {
+    background: #312e81;
+    color: #c7d2fe;
+}
+
+.role-badge.treasurer {
+    background: #064e3b;
+    color: #a7f3d0;
+}
+
+.role-badge.member {
+    background: #334155;
+    color: #e2e8f0;
+}
+
+/* --------------------------------------------------------------------------
+   3. SUMMARY CARDS GRID
+   -------------------------------------------------------------------------- */
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.card {
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 20px;
+    color: #f8fafc;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+.summary-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.card-header .title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.amount {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #f8fafc;
+}
+
+.amount.success-text,
+.badge.green {
+    color: #34d399;
+}
+
+.amount.danger-text,
+.badge.red {
+    color: #f87171;
+}
+
+/* Status Badges inside Cards */
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.badge.green {
+    background-color: rgba(52, 211, 153, 0.15);
+    border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.badge.red {
+    background-color: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Progress Bar */
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background-color: #334155;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: #6366f1;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+}
+
+/* --------------------------------------------------------------------------
+   4. FORM INPUTS & BUTTONS
+   -------------------------------------------------------------------------- */
+/* Hide Number Input Spinner Arrows */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+.inline-form {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.budget-input-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.budget-input {
+    padding: 8px 12px;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: #f8fafc;
+    background-color: #0f172a;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+select.budget-input {
+    cursor: pointer;
+}
+
+.budget-input::placeholder {
+    color: #64748b;
+}
+
+.budget-input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+/* Primary Action Button */
+.btn-save {
+    background-color: #4f46e5;
+    color: #ffffff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-save:hover {
+    background-color: #4338ca;
+}
+
+.btn-save:active {
+    transform: scale(0.98);
+}
+
+/* Delete / Remove Button */
+.btn-delete {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-delete:hover {
+    background: rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+}
+
+/* Secondary Button */
+.btn-secondary {
+    background: #334155;
+    color: #f8fafc;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+    background: #475569;
+}
+
+/* --------------------------------------------------------------------------
+   5. CATEGORY ALLOCATIONS & BREAKDOWNS
+   -------------------------------------------------------------------------- */
+.middle-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.single-column {
+    width: 100%;
+}
+
+.section-header {
+    margin-bottom: 16px;
+    border-bottom: 1px solid #334155;
+    padding-bottom: 12px;
+}
+
+.section-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #f8fafc;
+    margin: 0;
+}
+
+.breakdown-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.breakdown-item {
+    padding: 16px;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    background-color: #0f172a;
+    color: #f8fafc;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.category-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.category-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #f8fafc;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    background-color: #6366f1;
+    border-radius: 50%;
+}
+
+.amount-val {
+    font-size: 0.875rem;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.action-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.empty-state {
+    text-align: center;
+    color: #64748b;
+    padding: 24px;
+    font-style: italic;
+    margin: 0;
+}
+
+/* Add Category Form Card */
+.add-category-card {
+    margin-top: 20px;
+    padding: 20px;
+    background: #1e293b;
+    border: 1px dashed #334155;
+    border-radius: 8px;
+    color: #f8fafc;
+}
+
+.add-category-card h4 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 1rem;
+    color: #f8fafc;
+}
+
+.add-category-card .inline-form {
+    flex-wrap: wrap;
+}
+
+.add-category-card .budget-input {
+    flex: 1;
+    min-width: 180px;
+}
+
+/* --------------------------------------------------------------------------
+   6. MODALS & OVERLAYS
+   -------------------------------------------------------------------------- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 16px;
+}
+
+.modal-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    padding: 24px;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 450px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+    color: #f8fafc;
+}
+
+.modal-card h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #f8fafc;
+    font-size: 1.25rem;
+}
+
+.form-group {
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group label {
+    font-size: 0.875rem;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.form-group .budget-input {
+    width: 100%;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+}
+
+/* --------------------------------------------------------------------------
+   7. RESPONSIVE DESIGN ADJUSTMENTS
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .event-actions {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .event-actions form,
+    .event-actions select {
+        width: 100%;
+    }
+
+    .breakdown-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .action-row {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .action-row form {
+        width: 100%;
+    }
+
+    .action-row .budget-input-group {
+        width: 100%;
+    }
+}

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ClubVault - Reimbursement Summary</title>
+    <link rel="stylesheet" href="/static/css/expenses.css">
+    <style>
+        @media print {
+            .print-hidden {
+                display: none !important;
+                visibility: hidden !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <h1>Reimbursement Claim Sheet</h1>
+
+        <div class="print-hidden">
+            <a href="/expenses-page{% if event_id %}?event_id={{ event_id }}{% endif %}">
+                ← Back to Expenses
+            </a>
+        </div>
+
+        <!-- Event Selector -->
+        <div class="event-selector-container" style="margin: 20px 0;">
+            <label for="event-select" style="color: #fff; margin-right: 10px;">Select Event:</label>
+            <select id="event-select"
+                onchange="if(this.value) window.location.href='/reimbursement-page?event_id=' + this.value"
+                style="padding: 8px; border-radius: 6px; background: #1e1e2f; color: #fff; border: 1px solid #333;">
+                <option value="" disabled {% if not event_id %}selected{% endif %}>-- Choose an Event --</option>
+                {% for ev in all_events %}
+                <option value="{{ ev.id }}" {% if event_id==ev.id %}selected{% endif %}>{{ ev.event_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {% if not event_id %}
+        <div class="alert-box" style="padding: 15px; background: #1e1e2f; border-radius: 8px; color: #fff;">
+            <p>Please select an event to generate the reimbursement summary.</p>
+        </div>
+        {% else %}
+
+        <div style="background: #1e1e2f; padding: 20px; border-radius: 8px; margin-bottom: 20px; color: #fff;">
+            <h3>Event: {{ current_event.event_name if current_event else 'Selected Event' }}</h3>
+            <p style="color: #94a3b8; margin-top: 5px;">Review all compiled expenses below ready for claim submission.
+            </p>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Item Description</th>
+                    <th>Category</th>
+                    <th>Amount (RM)</th>
+                    <th>Receipt Proof</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set total_sum = namespace(value=0.0) %}
+                {% for exp in expenses %}
+                {% set total_sum.value = total_sum.value + exp.amount %}
+                <tr>
+                    <td>{{ exp.expense_name }}</td>
+                    <td>{{ exp.category_name }}</td>
+                    <td>RM {{ "%.2f"|format(exp.amount) }}</td>
+                    <td>
+                        {% if exp.receipt_url %}
+                        <a href="{{ exp.receipt_url }}" target="_blank">View 📄</a>
+                        {% else %}
+                        <span style="color: #64748b;">None</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" style="text-align: center; color: #64748b;">No expenses recorded for this event yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div
+            style="margin-top: 20px; background: #1e1e2f; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; color: #fff;">
+            <h3 style="margin: 0;">Total Claim Amount:</h3>
+            <h3 style="margin: 0; color: #22c55e;">RM {{ "%.2f"|format(total_sum.value) }}</h3>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <button onclick="window.print()" class="btn"
+                style="background: #2563eb; color: #fff; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">Print
+                / Export Reimbursement PDF</button>
+        </div>
+        {% endif %}
+    </div>
+</body>
+
+</html>

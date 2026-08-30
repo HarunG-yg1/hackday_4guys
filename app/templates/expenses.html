@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ClubVault - Expenses</title>
+    <link rel="stylesheet" href="/static/css/expenses.css">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Budget Status Banner -->
+        <div class="card"
+            style="margin-bottom: 20px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box;">
+            <div>
+                Active Monthly Budget: <strong>RM {{ "%.2f"|format(active_monthly_budget | default(total_budget) |
+                    default(0) | float) }}</strong>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span>Spent: RM {{ "%.2f"|format(total_spent | default(0) | float) }}</span>
+
+                {% set util = utilized_percentage | default(usage_percentage) | default(0) | float %}
+                {% set rem = remaining_funds | default(1) | float %}
+
+                <span class="badge {% if rem >= 0 %}green{% else %}red{% endif %}"
+                    style="padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; background: {% if rem >= 0 %}#065f46{% else %}#991b1b{% endif %}; color: #fff;">
+                    {{ "%.1f"|format(util) }}% USED - {% if rem >= 0 %}ON TRACK{% else %}OVER BUDGET{% endif %}
+                </span>
+            </div>
+        </div>
+
+        <!-- Header Section -->
+        <div class="page-header flex-between"
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div>
+                <h1 style="margin: 0; font-size: 1.75rem;">Event Expenses</h1>
+                <p class="sub-text" style="margin: 5px 0 0 0;">
+                    Active Event:
+                    <strong>{{ active_event.event_name if active_event else 'No Event Selected' }}</strong>
+                </p>
+            </div>
+        </div>
+
+        <!-- Event Selector Dropdown Container -->
+        <div class="card" style="margin-bottom: 20px; padding: 20px; box-sizing: border-box;">
+            <div class="section-header" style="margin-bottom: 10px;">
+                <h3 class="section-title" style="margin: 0;">Select Event</h3>
+            </div>
+            <form action="/expenses-page" method="get" class="inline-form" style="margin: 0;">
+                <select name="event_id" onchange="this.form.submit()" class="budget-input"
+                    style="width: 100%; padding: 10px; border-radius: 6px; background: #1e1e2f; color: #fff; border: 1px solid #333;">
+                    <option value="" disabled {% if not event_id %}selected{% endif %}>-- Choose an Event --</option>
+                    {% if all_events %}
+                    {% for ev in all_events %}
+                    <option value="{{ ev.id }}" {% if event_id==ev.id or (active_event and active_event.id==ev.id)
+                        %}selected{% endif %}>
+                        {{ ev.event_name }} (RM {{ "%.2f"|format(ev.total_budget|float) }})
+                    </option>
+                    {% endfor %}
+                    {% else %}
+                    <option value="">No Events Available</option>
+                    {% endif %}
+                </select>
+            </form>
+        </div>
+
+        {% if not event_id %}
+        <div class="card" style="margin-bottom: 20px; padding: 20px; text-align: center;">
+            <p class="empty-state" style="margin: 0; color: #94a3b8;">Please select an event from the dropdown above to
+                view and add expenses.</p>
+        </div>
+        {% else %}
+        <!-- Single Scan Form -->
+        <div class="card" style="margin-bottom: 20px; padding: 20px; box-sizing: border-box;">
+            <div class="section-header" style="margin-bottom: 15px;">
+                <h3 class="section-title" style="margin: 0;">Add New Expense (AI Scan)</h3>
+            </div>
+            <form action="/scan-receipt-ai" method="POST" enctype="multipart/form-data"
+                style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 0;">
+                <input type="hidden" name="event_id" value="{{ event_id }}">
+
+                <input type="text" name="expense_name" class="budget-input" placeholder="Expense name (Optional)..."
+                    style="flex: 1; min-width: 150px; padding: 10px;">
+                <input type="number" step="0.01" name="amount" class="budget-input" placeholder="Amount (RM - Optional)"
+                    style="width: 150px; padding: 10px;">
+
+                <select name="category_id" class="budget-input" style="flex: 1; min-width: 150px; padding: 10px;">
+                    <option value="" disabled selected>Auto-select Category</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}">{{ cat.category_name }}</option>
+                    {% endfor %}
+                </select>
+
+                <input type="file" id="receipt" name="receipt" class="budget-input" accept="image/*" required
+                    style="padding: 6px; width: auto;">
+
+                <button type="submit" class="btn-save" style="padding: 10px 20px;">Scan & Add</button>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- Expenses Table Section -->
+        <div class="card" style="margin-bottom: 20px; padding: 20px; box-sizing: border-box;">
+            <div class="section-header" style="margin-bottom: 15px;">
+                <h3 class="section-title" style="margin: 0;">Recorded Expenses</h3>
+            </div>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; color: #f8fafc;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #334155; color: #94a3b8; font-size: 0.875rem;">
+                            <th style="padding: 12px;">Expense Name</th>
+                            <th style="padding: 12px;">Category</th>
+                            <th style="padding: 12px;">Amount</th>
+                            <th style="padding: 12px;">Receipt</th>
+                            <th style="padding: 12px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if expenses %}
+                        {% for exp in expenses %}
+                        <tr style="border-bottom: 1px solid #1e293b;">
+                            <td style="padding: 12px;"><strong>{{ exp.expense_name }}</strong></td>
+                            <td style="padding: 12px; color: #94a3b8;">{{ exp.category_budgets.category_name if
+                                exp.category_budgets else 'Unassigned' }}</td>
+                            <td style="padding: 12px;">RM {{ "%.2f"|format(exp.amount) }}</td>
+                            <td style="padding: 12px;">
+                                {% if exp.receipt_url %}
+                                <a href="{{ exp.receipt_url }}" target="_blank"
+                                    style="color: #6366f1; text-decoration: none;">View 📄</a>
+                                {% else %}
+                                <span style="color: #64748b;">None</span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 12px;">
+                                <form action="/delete-expense" method="POST"
+                                    onsubmit="return confirm('Delete this expense?');" style="display:inline;">
+                                    <input type="hidden" name="expense_id" value="{{ exp.id }}">
+                                    <input type="hidden" name="event_id" value="{{ event_id }}">
+                                    <button type="submit" class="btn-delete">✕</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="empty-state"
+                                style="padding: 20px; text-align: center; color: #64748b;">No expenses recorded for this
+                                event yet.</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation Buttons (One Left, One Right) -->
+        <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; margin-bottom: 40px;">
+            <a href="/budget-page" class="btn-secondary">← Back to Budgets</a>
+            <a href="/reimbursement-page" class="btn-save">View Reimbursement Slip →</a>
+        </div>
+    </div>
+
+    <script src="/static/js/expenses.js"></script>
+</body>
+
+</html>

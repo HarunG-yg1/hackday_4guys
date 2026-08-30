@@ -6,7 +6,7 @@ from typing import Optional
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from google import genai
@@ -15,14 +15,26 @@ from PIL import Image
 from pydantic import BaseModel
 from supabase import Client, create_client
 
+import shutil
+import os
+from fastapi import UploadFile, File, Form
+
+import json
+from google.genai import types
+
+
 # ------------------------------------------------------------------------------
 # 1. Environment & Path Setup
 # ------------------------------------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parent
 env_path = BASE_DIR / ".env"
 load_dotenv(dotenv_path=env_path, override=True)
+# Ensure a folder exists to save uploaded receipts locally for the hackathon
+UPLOAD_DIR = "app/static/uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 app = FastAPI(title="ClubVault API", version="1.0.0")
+
 
 # Mount static assets if folder exists
 static_dir = BASE_DIR / "app" / "static"
@@ -107,13 +119,16 @@ class ReimbursementCreate(BaseModel):
 # ------------------------------------------------------------------------------
 # 3. Safe Template Renderer (Prevents 500 errors if Teammate hasn't made HTML file)
 # ------------------------------------------------------------------------------
-def render_page_safely(request: Request, template_name: str, fallback_title: str):
+def render_page_safely(request: Request, template_name: str, fallback_title: str, context: dict = None):
     if templates:
         try:
-            return templates.TemplateResponse(request=request, name=template_name)
+            render_context = {"request": request}
+            if context:
+                render_context.update(context)
+            return templates.TemplateResponse(name=template_name, context=render_context)
         except Exception:
             pass
-    
+
     # Fallback response if template isn't finished by teammate
     return HTMLResponse(content=f"""
     <!DOCTYPE html>
@@ -133,27 +148,368 @@ def render_page_safely(request: Request, template_name: str, fallback_title: str
 # ------------------------------------------------------------------------------
 @app.get("/")
 @app.get("/dashboard")
-async def render_dashboard(request: Request):
-    return render_page_safely(request, "dashboard.html", "Dashboard")
+async def dashboard_page(request: Request):
+    # Example logic using your database models:
+    # db = next(get_db())
+    # expenses = db.query(Expense).all()
+    # budgets = db.query(Budget).all()
+
+    # --- Sample calculation logic ---
+    total_spending = sum(exp.amount for exp in expenses) if 'expenses' in locals() else 934.50
+    monthly_limit = monthly_budget.total_limit if 'monthly_budget' in locals() else 1500.00 # fallback # Replace with dynamic sum from your budget table
+    
+    # Calculate category breakdowns dynamically
+    category_totals = {}
+    if 'expenses' in locals():
+        for exp in expenses:
+            cat = exp.category_name or "Other"
+            category_totals[cat] = category_totals.get(cat, 0.0) + exp.amount
+
+    return templates.TemplateResponse(
+        request, 
+        "dashboard.html", 
+        {
+            "total_spending": total_spending,
+            "monthly_limit": monthly_limit,
+            "spending_percentage": round((total_spending / monthly_limit) * 100, 1) if monthly_limit > 0 else 0,
+            "category_totals": category_totals,
+            "recent_expenses": expenses[:5] if 'expenses' in locals() else []
+        }
+    )
 
 
 @app.get("/expenses-page")
-async def render_expenses(request: Request):
-    return render_page_safely(request, "expenses.html", "Expenses")
+async def expenses_page(request: Request, event_id: str | None = None):
+    expenses = []
+    categories = []
+    active_event = None
+    
+    # Fetch all events so the dropdown can always show them
+    events_res = supabase.table("events").select("*").execute()
+    all_events = events_res.data or []
+    
+    if event_id and event_id != "None":
+        # Find the currently active event object
+        active_event = next((ev for ev in all_events if str(ev["id"]) == str(event_id)), None)
+        
+        expenses_res = supabase.table("expenses").select("*, category_budgets(category_name)").eq("event_id", event_id).execute()
+        expenses = expenses_res.data or []
+        
+        categories_res = supabase.table("category_budgets").select("*").eq("event_id", event_id).execute()
+        categories = categories_res.data or []
+
+    # Calculate totals
+    total_budget = float(active_event["total_budget"]) if active_event and active_event.get("total_budget") else 0.0
+    total_spent = sum(float(exp.get("amount", 0)) for exp in expenses)
+    remaining_funds = total_budget - total_spent
+    utilized_percentage = (total_spent / total_budget * 100) if total_budget > 0 else 0.0
+
+    return templates.TemplateResponse(
+        request, 
+        "expenses.html", 
+        {
+            "expenses": expenses,
+            "categories": categories,
+            "event_id": event_id,
+            "all_events": all_events,
+            "active_event": active_event,
+            "total_budget": total_budget,
+            "total_spent": total_spent,
+            "remaining_funds": remaining_funds,
+            "utilized_percentage": utilized_percentage
+        }
+    )
+
+@app.post("/add-expense")
+async def add_expense(
+    event_id: str | None = Form(None),
+    expense_name: str | None = Form(""),
+    amount: float | None = Form(0.00),
+    category_id: str | None = Form(None),
+    receipt: UploadFile | None = File(None)
+):
+    receipt_url = None
+    
+    if receipt and receipt.filename:
+        file_path = os.path.join(UPLOAD_DIR, receipt.filename)
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(receipt.file, buffer)
+        receipt_url = f"/static/uploads/{receipt.filename}"
+
+    # Safely convert "None" strings or empty inputs to actual Python None (SQL NULL)
+    clean_event_id = event_id if event_id and event_id != "None" else None
+    clean_category_id = category_id if category_id and category_id != "None" else None
+
+    supabase.table("expenses").insert({
+        "event_id": clean_event_id,
+        "category_id": clean_category_id,
+        "expense_name": expense_name,
+        "amount": amount,
+        "receipt_url": receipt_url
+    }).execute()
+    
+    return RedirectResponse(url=f"/expenses-page?event_id={clean_event_id}", status_code=303)
+
+@app.post("/delete-expense")
+async def delete_expense(
+    expense_id: str = Form(...),
+    event_id: str = Form(...)
+):
+    supabase.table("expenses").delete().eq("id", expense_id).execute()
+    return RedirectResponse(url=f"/expenses-page?event_id={event_id}", status_code=303)
+
+@app.post("/scan-receipt-ai")
+async def scan_receipt_ai(
+    request: Request,
+    event_id: str = Form(...),
+    expense_name: str = Form(None),
+    amount: float = Form(None),
+    category_id: str = Form(None),
+    receipt: UploadFile = File(...)
+):
+    detected_expense_name = expense_name
+    detected_amount = amount
+    detected_category_id = category_id
+
+    if receipt and receipt.filename and gemini_client:
+        try:
+            await receipt.seek(0)
+            contents = await receipt.read()
+            image = Image.open(io.BytesIO(contents))
+            
+            prompt = (
+                "Analyze this receipt image and extract structured financial data. "
+                "Provide a valid JSON object with EXACTLY these keys: "
+                "\"expense_name\" (string, e.g. merchant name), \"amount\" (number, float), "
+                "\"category_name\" (string). "
+                "Do not include any markdown formatting blocks like ```json ... ```, just output the raw JSON text."
+            )
+            
+            response = gemini_client.models.generate_content(
+                model="gemini-3.6-flash",
+                contents=[image, prompt],
+                config=types.GenerateContentConfig(
+                    temperature=0.1,
+                ),
+            )
+            
+            raw_text = response.text.strip()
+            print(f"RAW GEMINI RESPONSE: {raw_text}")
+            
+            if raw_text.startswith("```"):
+                raw_text = raw_text.split("```")[1]
+                if raw_text.startswith("json"):
+                    raw_text = raw_text[4:].strip()
+            
+            result_data = json.loads(raw_text)
+            
+            # Extract values if fields were left blank by the user
+            if not detected_expense_name or detected_expense_name.strip() == "":
+                detected_expense_name = result_data.get("expense_name") or "Scanned Expense"
+            
+            if not detected_amount or detected_amount == 0.0:
+                detected_amount = float(result_data.get("amount") or 0.0)
+
+            parsed_category_name = result_data.get("category_name")
+            if not detected_category_id and parsed_category_name:
+                try:
+                    cat_res = supabase.table("category_budgets").select("id").eq("event_id", event_id).ilike("category_name", f"%{parsed_category_name.strip()}%").execute()
+                    if cat_res.data and len(cat_res.data) > 0:
+                        detected_category_id = cat_res.data[0]["id"]
+                except Exception as cat_err:
+                    print(f"Category matching error: {cat_err}")
+                    
+        except Exception as e:
+            print(f"Gemini scan error: {e}")
+            import traceback
+            traceback.print_exc()
+
+    # Final fallbacks to avoid null insertion
+    if not detected_expense_name or detected_expense_name.strip() == "":
+        detected_expense_name = "Scanned Expense"
+    if not detected_amount:
+        detected_amount = 0.0
+
+    # Save receipt copy locally
+    receipt_url = None
+    if receipt and receipt.filename:
+        try:
+            file_path = os.path.join(UPLOAD_DIR, receipt.filename)
+            with open(file_path, "wb") as buffer:
+                await receipt.seek(0)
+                shutil.copyfileobj(receipt.file, buffer)
+            receipt_url = f"/static/uploads/{receipt.filename}"
+        except Exception as ex:
+            print(f"File save error: {ex}")
+
+    clean_event_id = event_id if event_id and event_id != "None" else None
+    clean_category_id = detected_category_id if detected_category_id and detected_category_id != "None" else None
+
+    # Insert into Supabase database
+    supabase.table("expenses").insert({
+        "event_id": clean_event_id,
+        "category_id": clean_category_id,
+        "expense_name": str(detected_expense_name)[:255],
+        "amount": float(detected_amount),
+        "receipt_url": receipt_url
+    }).execute()
+
+    return RedirectResponse(url=f"/expenses-page?event_id={clean_event_id}", status_code=303)
+
+@app.get("/reimbursement-page")
+async def reimbursement_page(request: Request, event_id: str = None):
+    all_events_res = supabase.table("events").select("*").execute()
+    all_events = all_events_res.data or []
+    
+    expenses = []
+    current_event = None
+    
+    if event_id:
+        # Fetch event details
+        ev_res = supabase.table("events").select("*").eq("id", event_id).single().execute()
+        current_event = ev_res.data
+        
+        # Fetch expenses with their categories
+        exp_res = supabase.table("expenses").select("*, category_budgets(category_name)").eq("event_id", event_id).execute()
+        expenses = exp_res.data or []
+        
+    return templates.TemplateResponse(
+        request, 
+        "reimbursement.html", 
+        {
+            "all_events": all_events,
+            "event_id": event_id,
+            "current_event": current_event,
+            "expenses": expenses
+        }
+    )
 
 
-@app.get("/quotations-page")
-async def render_quotations(request: Request):
-    return render_page_safely(request, "quotations.html", "Quotations")
+# Route: Load Budget Page with Active Event & History
+@app.get("/budget-page")
+async def get_budget_page(request: Request, event_id: str = None):
+    # 1. Fetch all previous events for selector dropdown / history
+    events_res = supabase.table("events").select("*").order("created_at", desc=True).execute()
+    all_events = events_res.data if events_res.data else []
+
+    # 2. Identify selected event or fall back to most recent
+    active_event = None
+    if event_id:
+        active_event = next((e for e in all_events if str(e["id"]) == event_id), None)
+    elif all_events:
+        active_event = all_events[0]
+
+    # Defaults if no events exist yet
+    total_budget = float(active_event.get("total_budget", 0.0)) if active_event else 0.0
+    category_allocations = []
+
+    if active_event:
+        categories_res = (
+            supabase.table("category_budgets")
+            .select("*")
+            .eq("event_id", active_event["id"])
+            .execute()
+        )
+        category_allocations = categories_res.data if categories_res.data else []
+
+    total_spent = sum([float(item.get("allocated_amount", 0.0)) for item in category_allocations])
+    remaining_funds = total_budget - total_spent
+    utilized_percentage = (total_spent / total_budget * 100) if total_budget > 0 else 0.0
+
+    context = {
+        "user": {"full_name": "David Ting", "email": "ting@mmu.edu.my", "role": "Admin", "initials": "DT"},
+        "all_events": all_events,
+        "active_event": active_event,
+        "total_budget": total_budget,
+        "remaining_funds": remaining_funds,
+        "total_spent": total_spent,
+        "utilized_percentage": utilized_percentage,
+        "category_allocations": category_allocations,
+    }
+
+    return templates.TemplateResponse(request=request, name="budget.html", context=context)
 
 
-@app.get("/reimbursements-page")
-async def render_reimbursements(request: Request):
-    return render_page_safely(request, "reimbursements.html", "Reimbursements")
+# Route: Create New Event or Reuse Categories from a Past Event
+@app.post("/create-event")
+async def create_event(
+    event_name: str = Form(...),
+    total_budget: float = Form(...),
+    reuse_event_id: str = Form(None)
+):
+    # Insert new event
+    event_res = supabase.table("events").insert({
+        "event_name": event_name,
+        "total_budget": total_budget
+    }).execute()
+    
+    new_event = event_res.data[0]
+    new_event_id = new_event["id"]
+
+    # Optional: Reuse categories from a previous event template
+    if reuse_event_id and reuse_event_id != "none":
+        source_categories = supabase.table("category_budgets").select("*").eq("event_id", reuse_event_id).execute()
+        if source_categories.data:
+            new_cats = [
+                {
+                    "event_id": new_event_id,
+                    "category_name": cat["category_name"],
+                    "allocated_amount": cat["allocated_amount"]
+                }
+                for cat in source_categories.data
+            ]
+            supabase.table("category_budgets").insert(new_cats).execute()
+
+    return RedirectResponse(url=f"/budget-page?event_id={new_event_id}", status_code=303)
+
+
+# Route: Delete a Category Allocation
+@app.post("/delete-category")
+async def delete_category(category_id: str = Form(...), event_id: str = Form(...)):
+    supabase.table("category_budgets").delete().eq("id", category_id).execute()
+    return RedirectResponse(url=f"/budget-page?event_id={event_id}", status_code=303)
+
+# ------------------------------------------------------------------------------
+# 5. Form Submission Handlers (Budget & Categories)
+# ------------------------------------------------------------------------------
+@app.post("/add-budget")
+async def add_budget(amount: float = Form(...), action_type: Optional[str] = Form(None)):
+    existing = supabase.table("budgets").select("id").limit(1).execute()
+    if existing.data:
+        supabase.table("budgets").update({"total_budget": amount}).eq("id", existing.data[0]["id"]).execute()
+    else:
+        supabase.table("budgets").insert({"event_name": "General Budget", "total_budget": amount}).execute()
+
+    return RedirectResponse(url="/budget-page", status_code=303)
+
+
+@app.post("/update-category")
+async def update_category(category_id: str = Form(...), amount: float = Form(...)):
+    # Update allocated_amount instead of amount
+    supabase.table("category_budgets").update({
+        "allocated_amount": amount
+    }).eq("id", category_id).execute()
+    
+    return RedirectResponse(url="/budget-page", status_code=303)
+
+
+@app.post("/add-category")
+async def add_category(
+    category: str = Form(...),
+    amount: float = Form(...),
+    event_id: str = Form(...)
+):
+    supabase.table("category_budgets").insert({
+        "event_id": event_id,
+        "category_name": category,
+        "allocated_amount": amount
+    }).execute()
+
+    return RedirectResponse(url=f"/budget-page?event_id={event_id}", status_code=303)
 
 
 # ------------------------------------------------------------------------------
-# 5. Budgets & Spending Alerts
+# 6. Budgets & Spending Alerts
 # ------------------------------------------------------------------------------
 @app.post("/budgets", status_code=status.HTTP_201_CREATED)
 def create_budget(budget: BudgetCreate):
@@ -197,7 +553,7 @@ def get_category_analytics(budget_id: str):
         expenses = res.data or []
 
         total_spent = sum(e["amount"] for e in expenses)
-        
+
         category_totals = {}
         for e in expenses:
             cat = e.get("category") or "Uncategorized"
@@ -222,7 +578,7 @@ def get_category_analytics(budget_id: str):
 
 
 # ------------------------------------------------------------------------------
-# 6. Expenses & Gemini OCR Scanner
+# 7. Expenses & Gemini OCR Scanner
 # ------------------------------------------------------------------------------
 @app.post("/expenses", status_code=status.HTTP_201_CREATED)
 def create_expense(expense: ExpenseCreate):
@@ -306,16 +662,16 @@ async def scan_and_save_receipt(
         "category": ocr_result.category or "General",
         "receipt_url": None
     }
-    
+
     res = supabase.table("expenses").insert(expense_payload).execute()
     if not res.data:
         raise HTTPException(status_code=500, detail="Failed to save scanned expense")
-        
+
     return res.data[0]
 
 
 # ------------------------------------------------------------------------------
-# 7. Quotations & Reimbursements Endpoints
+# 8. Quotations & Reimbursements Endpoints
 # ------------------------------------------------------------------------------
 @app.post("/quotations", status_code=status.HTTP_201_CREATED)
 def create_quotation(quote: QuotationCreate):
@@ -335,19 +691,47 @@ def list_quotations(budget_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/reimbursements", status_code=status.HTTP_201_CREATED)
+@app.post("/reimbursement", status_code=status.HTTP_201_CREATED)
 def create_reimbursement(claim: ReimbursementCreate):
     try:
-        res = supabase.table("reimbursements").insert(claim.model_dump()).execute()
+        res = supabase.table("reimbursement").insert(claim.model_dump()).execute()
         return res.data[0]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/reimbursements")
-def list_reimbursements():
-    try:
-        res = supabase.table("reimbursements").select("*").execute()
-        return res.data
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.get("/reimbursement-page")
+async def reimbursement_page(request: Request, event_id: str = None):
+    all_events_res = supabase.table("events").select("*").execute()
+    all_events = all_events_res.data or []
+    
+    expenses = []
+    current_event = None
+    
+    if event_id:
+        ev_res = supabase.table("events").select("*").eq("id", event_id).execute()
+        current_event = ev_res.data[0] if ev_res.data else None
+        
+        # Fetch expenses and categories separately to prevent join crashes
+        exp_res = supabase.table("expenses").select("*").eq("event_id", event_id).execute()
+        raw_expenses = exp_res.data or []
+        
+        cat_res = supabase.table("category_budgets").select("*").eq("event_id", event_id).execute()
+        categories_map = {cat["id"]: cat["category_name"] for cat in (cat_res.data or [])}
+        
+        expenses = []
+        for exp in raw_expenses:
+            cat_id = exp.get("category_id")
+            exp["category_name"] = categories_map.get(cat_id, "Unassigned")
+            expenses.append(exp)
+            
+    return templates.TemplateResponse(
+        request, 
+        "reimbursement.html", 
+        {
+            "all_events": all_events,
+            "event_id": event_id,
+            "current_event": current_event,
+            "expenses": expenses
+        }
+    )

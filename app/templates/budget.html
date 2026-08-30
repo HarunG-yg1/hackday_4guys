@@ -1,0 +1,747 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ClubVault - Budgets</title>
+
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/budget.css">
+
+</head>
+
+<body>
+
+    <div class="app-container">
+
+        <!-- ===================================================== -->
+        <!-- SIDEBAR -->
+        <!-- ===================================================== -->
+
+        <aside class="sidebar">
+
+            <div class="brand">
+
+                <div class="brand-icon">
+                    C
+                </div>
+
+                <div class="brand-text">
+                    <h2>ClubVault</h2>
+                    <span>Finance Portal</span>
+                </div>
+
+            </div>
+
+
+            <nav class="navigation">
+
+                <p class="nav-label">
+                    MAIN MENU
+                </p>
+
+                <a href="/dashboard" class="nav-item">
+                    <span class="nav-icon">⌂</span>
+                    <span>Dashboard</span>
+                </a>
+
+                <a href="/expenses-page" class="nav-item">
+                    <span class="nav-icon">◫</span>
+                    <span>Expenses</span>
+                </a>
+
+                <a href="/reimbursement-page" class="nav-item">
+                    <span class="nav-icon">↗</span>
+                    <span>Reimbursement</span>
+                </a>
+
+                <a href="/budget-page" class="nav-item active">
+                    <span class="nav-icon">◈</span>
+                    <span>Budgets</span>
+                </a>
+
+
+                <p class="nav-label">
+                    MANAGEMENT
+                </p>
+
+                <a href="/settings" class="nav-item">
+                    <span class="nav-icon">⚙</span>
+                    <span>Settings</span>
+                </a>
+
+            </nav>
+
+        </aside>
+
+
+        <!-- ===================================================== -->
+        <!-- MAIN CONTENT -->
+        <!-- ===================================================== -->
+
+        <main class="main-content">
+
+
+            <!-- ================================================= -->
+            <!-- TOP NAVBAR -->
+            <!-- ================================================= -->
+
+            <header class="topbar">
+
+                <div class="breadcrumb">
+
+                    <span>ClubVault</span>
+
+                    <span>/</span>
+
+                    <strong>Budgets</strong>
+
+                </div>
+
+
+                <div class="topbar-actions">
+
+                    <!-- USER PROFILE -->
+
+                    <div class="profile-menu">
+
+                        <div class="profile-avatar">
+                            {{ user.initials|default('U') }}
+                        </div>
+
+
+                        <div class="profile-details">
+
+                            <div class="profile-name-row">
+
+                                <strong>
+                                    {{ user.full_name|default('User') }}
+                                </strong>
+
+
+                                <span class="role-badge {{ user.role|default('member')|lower }}">
+
+                                    {{ user.role|default('Member')|upper }}
+
+                                </span>
+
+                            </div>
+
+
+                            <span class="profile-email">
+
+                                {{ user.email|default('') }}
+
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </header>
+
+
+            <!-- ================================================= -->
+            <!-- CONTENT -->
+            <!-- ================================================= -->
+
+            <div class="content-pad">
+
+
+                <!-- ================================================= -->
+                <!-- PAGE HEADER -->
+                <!-- ================================================= -->
+
+                <div class="page-header flex-between">
+
+                    <div>
+
+                        <h1>
+                            Budget Management
+                        </h1>
+
+                        <p class="sub-text">
+
+                            Current Event:
+
+                            <strong>
+
+                                {{ active_event.event_name
+                                if active_event
+                                else 'No Event Selected' }}
+
+                            </strong>
+
+                        </p>
+
+                    </div>
+
+
+                    <!-- EVENT ACTIONS -->
+
+                    <div class="event-actions">
+
+
+                        <!-- EVENT SELECTOR -->
+
+                        <form action="/budget-page" method="get" class="inline-form">
+
+                            <select name="event_id" onchange="this.form.submit()" class="budget-input">
+
+                                {% if all_events %}
+
+                                {% for ev in all_events %}
+
+                                <option value="{{ ev.id }}" {% if active_event and active_event.id==ev.id %} selected {%
+                                    endif %}>
+
+                                    {{ ev.event_name }}
+
+                                    (RM
+                                    {{ "%.2f"|format(
+                                    ev.total_budget|float
+                                    ) }}
+                                    )
+
+                                </option>
+
+                                {% endfor %}
+
+                                {% else %}
+
+                                <option value="">
+                                    No Events Available
+                                </option>
+
+                                {% endif %}
+
+                            </select>
+
+                        </form>
+
+
+                        <!-- CREATE EVENT -->
+
+                        {% if user.role in ['Admin', 'Treasurer'] %}
+
+                        <button type="button" class="btn-save"
+                            onclick="document.getElementById('eventModal').style.display='flex'">
+
+                            + New Event
+
+                        </button>
+
+                        {% endif %}
+
+
+                    </div>
+
+                </div>
+
+
+                <!-- ================================================= -->
+                <!-- SUMMARY CARDS -->
+                <!-- ================================================= -->
+
+                <div class="summary-grid">
+
+
+                    <!-- TOTAL BUDGET -->
+
+                    <div class="card summary-card">
+
+                        <div class="card-header">
+
+                            <span class="title">
+                                Total Monthly Budget
+                            </span>
+
+                        </div>
+
+
+                        <div class="amount">
+
+                            RM
+                            {{ "%.2f"|format(
+                            total_budget|default(0)|float
+                            ) }}
+
+                        </div>
+
+
+                        <!-- PROGRESS -->
+
+                        <div class="progress-bar">
+
+                            <div class="progress-fill" style="width: {{
+                                [utilized_percentage|default(0)|float, 100]|min
+                            }}%;">
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="sub-text">
+
+                            {{
+                            "%.1f"|format(
+                            utilized_percentage|default(0)|float
+                            )
+                            }}%
+                            allocated
+
+                        </div>
+
+
+                        <!-- SET TOTAL BUDGET -->
+
+                        {% if user.role in ['Admin', 'Treasurer']
+                        and active_event %}
+
+                        <form action="/add-budget" method="post" class="budget-input-group">
+
+                            <input type="hidden" name="action_type" value="set">
+
+
+                            <input type="hidden" name="event_id" value="{{ active_event.id }}">
+
+
+                            <input type="number" step="0.01" min="0" name="amount" class="budget-input" value="{{
+                                '%.2f'|format(
+                                    total_budget|default(0)|float
+                                )
+                            }}" placeholder="Set Total Budget..." required>
+
+
+                            <button type="submit" class="btn-save">
+
+                                Set Total
+
+                            </button>
+
+                        </form>
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <!-- REMAINING FUNDS -->
+
+                    <div class="card summary-card">
+
+                        <div class="card-header">
+
+                            <span class="title">
+                                Remaining Unallocated Funds
+                            </span>
+
+                        </div>
+
+
+                        <div class="amount
+                        {% if remaining_funds|default(0)|float < 0 %}
+                            danger-text
+                        {% else %}
+                            success-text
+                        {% endif %}">
+
+                            RM
+                            {{ "%.2f"|format(
+                            remaining_funds|default(0)|float
+                            ) }}
+
+                        </div>
+
+
+                        <div>
+
+
+                            {% if remaining_funds|default(0)|float >= 0 %}
+
+                            <span class="badge green">
+                                Within Budget
+                            </span>
+
+                            {% else %}
+
+                            <span class="badge red">
+                                Over Budget
+                            </span>
+
+                            {% endif %}
+
+
+                            <span class="sub-text">
+
+                                Total Allocated:
+
+                                RM
+                                {{ "%.2f"|format(
+                                total_spent|default(0)|float
+                                ) }}
+
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ================================================= -->
+                <!-- CATEGORY ALLOCATIONS -->
+                <!-- ================================================= -->
+
+                <div class="middle-grid single-column">
+
+                    <div class="card">
+
+
+                        <!-- SECTION HEADER -->
+
+                        <div class="section-header">
+
+                            <h3 class="section-title">
+                                Category Allocations
+                            </h3>
+
+                        </div>
+
+
+                        <div class="breakdown-list">
+
+
+                            <!-- ===================================== -->
+                            <!-- EXISTING CATEGORIES -->
+                            <!-- ===================================== -->
+
+                            {% if category_allocations %}
+
+
+                            {% for item in category_allocations %}
+
+                            <div class="breakdown-item flex-between">
+
+
+                                <!-- CATEGORY INFORMATION -->
+
+                                <div class="category-info">
+
+                                    <div class="category-name">
+
+                                        <div class="dot"></div>
+
+                                        {{ item.category_name }}
+
+                                    </div>
+
+
+                                    <div class="amount-val">
+
+                                        RM
+                                        {{
+                                        "%.2f"|format(
+                                        item.allocated_amount|float
+                                        )
+                                        }}
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- ================================= -->
+                                <!-- ADMIN / TREASURER ACTIONS -->
+                                <!-- ================================= -->
+
+                                {% if user.role in ['Admin', 'Treasurer'] %}
+
+                                <div class="action-row">
+
+
+                                    <!-- UPDATE CATEGORY -->
+
+                                    <form action="/update-category" method="post" class="budget-input-group">
+
+
+                                        <input type="hidden" name="category_id" value="{{ item.id }}">
+
+
+                                        <input type="hidden" name="event_id" value="{{ active_event.id }}">
+
+
+                                        <input type="number" step="0.01" min="0" name="amount" class="budget-input"
+                                            value="{{
+                                                '%.2f'|format(
+                                                    item.allocated_amount|float
+                                                )
+                                            }}" placeholder="New limit..." required>
+
+
+                                        <button type="submit" class="btn-save">
+
+                                            Update
+
+                                        </button>
+
+                                    </form>
+
+
+                                    <!-- DELETE CATEGORY -->
+
+                                    <form action="/delete-category" method="post"
+                                        onsubmit="return confirm('Are you sure you want to remove this category?');">
+
+
+                                        <input type="hidden" name="category_id" value="{{ item.id }}">
+
+
+                                        <input type="hidden" name="event_id" value="{{ active_event.id }}">
+
+
+                                        <button type="submit" class="btn-delete" title="Remove Category">
+
+                                            ✕
+
+                                        </button>
+
+                                    </form>
+
+                                </div>
+
+                                {% endif %}
+
+                            </div>
+
+                            {% endfor %}
+
+
+                            {% else %}
+
+
+                            <!-- NO CATEGORIES -->
+
+                            <p class="empty-state">
+
+                                No categories configured for this event.
+
+                            </p>
+
+
+                            {% endif %}
+
+
+                            <!-- ===================================== -->
+                            <!-- ADD NEW CATEGORY -->
+                            <!-- ===================================== -->
+
+                            {% if active_event
+                            and user.role in ['Admin', 'Treasurer'] %}
+
+
+                            <div class="add-category-card">
+
+                                <h4>
+                                    Add New Category
+                                </h4>
+
+
+                                <form action="/add-category" method="post" class="inline-form">
+
+
+                                    <input type="hidden" name="event_id" value="{{ active_event.id }}">
+
+
+                                    <input type="text" name="category" class="budget-input"
+                                        placeholder="Category Name..." required>
+
+
+                                    <input type="number" step="0.01" min="0" name="amount" class="budget-input"
+                                        placeholder="Allocated RM..." required>
+
+
+                                    <button type="submit" class="btn-save">
+
+                                        Add Category
+
+                                    </button>
+
+                                </form>
+
+                            </div>
+
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </main>
+
+    </div>
+
+
+    <!-- ========================================================= -->
+    <!-- CREATE EVENT MODAL -->
+    <!-- ========================================================= -->
+
+    {% if user.role in ['Admin', 'Treasurer'] %}
+
+    <div id="eventModal" class="modal-overlay" style="display: none;">
+
+        <div class="modal-card">
+
+
+            <h3>
+                Create New Event Budget
+            </h3>
+
+
+            <form action="/create-event" method="post">
+
+
+                <!-- EVENT NAME -->
+
+                <div class="form-group">
+
+                    <label>
+                        Event Name
+                    </label>
+
+                    <input type="text" name="event_name" class="budget-input" placeholder="e.g. MMU Hackathon 2026"
+                        required>
+
+                </div>
+
+
+                <!-- TOTAL BUDGET -->
+
+                <div class="form-group">
+
+                    <label>
+                        Total Budget (RM)
+                    </label>
+
+                    <input type="number" step="0.01" min="0" name="total_budget" class="budget-input"
+                        placeholder="1000.00" required>
+
+                </div>
+
+
+                <!-- REUSE CATEGORIES -->
+
+                <div class="form-group">
+
+                    <label>
+                        Copy Categories from Past Event?
+                    </label>
+
+
+                    <select name="reuse_event_id" class="budget-input">
+
+
+                        <option value="none">
+
+                            -- Start Fresh
+                            (No Preset Categories) --
+
+                        </option>
+
+
+                        {% for ev in all_events %}
+
+                        <option value="{{ ev.id }}">
+
+                            {{ ev.event_name }}
+
+                        </option>
+
+                        {% endfor %}
+
+
+                    </select>
+
+                </div>
+
+
+                <!-- MODAL BUTTONS -->
+
+                <div class="modal-actions">
+
+
+                    <button type="button" class="btn-secondary"
+                        onclick="document.getElementById('eventModal').style.display='none'">
+
+                        Cancel
+
+                    </button>
+
+
+                    <button type="submit" class="btn-save">
+
+                        Create Event
+
+                    </button>
+
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- JAVASCRIPT -->
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/budget.js"></script>
+
+
+    <script>
+
+        // Close modal when clicking outside the modal card
+
+        const eventModal = document.getElementById('eventModal');
+
+        if (eventModal) {
+
+            eventModal.addEventListener('click', function (event) {
+
+                if (event.target === eventModal) {
+
+                    eventModal.style.display = 'none';
+
+                }
+
+            });
+
+        }
+
+    </script>
+
+</body>
+
+</html>
+```
